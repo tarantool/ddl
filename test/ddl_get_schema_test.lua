@@ -31,8 +31,6 @@ g.teardown = function()
     g.spaces = nil
 end
 
-
-
 function g.test_get_schema_valid_ddl_format()
     g.space = box.schema.space.create('test_schema', {
         engine = 'memtx',
@@ -108,16 +106,26 @@ function g.test_get_schema_valid_ddl_format()
     })
 end
 
+function g.test_blank()
+    g.space = box.schema.space.create('blank')
 
-function g.test_no_index()
-    g.space = box.schema.space.create('no_index', {
+    local res = ddl.get_schema()
+    t.assert_equals(res['blank'], {
         engine = 'memtx',
         is_local = false,
         temporary = false,
+        format = {},
+        indexes = {},
+    })
+end
+
+function g.test_no_index()
+    g.space = box.schema.space.create('no_index', {
         format = {
-            {name = 'field1', type = 'string', is_nullable = false},
-            {name = 'field2', type = 'unsigned', is_nullable = false},
-            {name = 'field3', type = 'string', is_nullable = false},
+            {name = 'field1', type = 'string'},
+            {name = 'field2'},
+            {name = 'field3', is_nullable = true},
+            {name = 'field4', is_nullable = false},
         }
     })
 
@@ -129,8 +137,9 @@ function g.test_no_index()
             temporary = false,
             format = {
                 {name = 'field1', type = 'string', is_nullable = false},
-                {name = 'field2', type = 'unsigned', is_nullable = false},
-                {name = 'field3', type = 'string', is_nullable = false},
+                {name = 'field2', type = 'any', is_nullable = false},
+                {name = 'field3', type = 'any', is_nullable = true},
+                {name = 'field4', type = 'any', is_nullable = false},
             },
             indexes = {},
         }
@@ -138,42 +147,43 @@ function g.test_no_index()
 end
 
 
-function g.test_not_specified_format()
-    g.space = box.schema.space.create('not_specified_format')
+function g.test_no_format()
+    g.space = box.schema.space.create('no_format')
     g.space:create_index('primarykey')
-    g.space:create_index('multikey', {unique = false, parts = {{2, 'string', path = 'data[*].name'}}})
+    g.space:create_index('multikey', {
+        unique = false,
+        parts = {{2, 'string', path = 'data[*].name'}}
+    })
 
     local res = ddl.get_schema()
-    t.assert_equals(res, {
-        ['not_specified_format'] = {
-            engine = 'memtx',
-            is_local = false,
-            temporary = false,
-            format = {},
-            indexes = {
-                {
-                    name = 'primarykey',
-                    type = 'TREE',
-                    unique = true,
-                    parts = {
-                        {
-                            path = 1,
-                            is_nullable = false,
-                            type = 'unsigned',
-                        },
-                    }
-                },
-                {
-                    name = 'multikey',
-                    type = 'TREE',
-                    unique = false,
-                    parts = {
-                        {
-                            path = '2.data[*].name',
-                            type = 'string',
-                            is_nullable = false,
-                            collation = nil,
-                        }
+    t.assert_equals(res['no_format'], {
+        engine = 'memtx',
+        is_local = false,
+        temporary = false,
+        format = {},
+        indexes = {
+            {
+                name = 'primarykey',
+                type = 'TREE',
+                unique = true,
+                parts = {
+                    {
+                        path = 1,
+                        is_nullable = false,
+                        type = 'unsigned',
+                    },
+                }
+            },
+            {
+                name = 'multikey',
+                type = 'TREE',
+                unique = false,
+                parts = {
+                    {
+                        path = '2.data[*].name',
+                        type = 'string',
+                        is_nullable = false,
+                        collation = nil,
                     }
                 }
             }
@@ -188,9 +198,9 @@ function g.test_hash_index()
         is_local = false,
         temporary = false,
         format = {
-            {name = 'field1', type = 'string', is_nullable = false},
-            {name = 'field2', type = 'unsigned', is_nullable = false},
-            {name = 'field3', type = 'string', is_nullable = false},
+            {name = 'field1', type = 'string'},
+            {name = 'field2', type = 'unsigned'},
+            {name = 'field3', type = 'string'},
         }
     })
 
@@ -481,7 +491,12 @@ function g.test_with_function_index()
         {name = 'name', type = 'string', is_nullable = false},
         {name = 'addr', type = 'string', is_nullable = false}
     })
-    g.space:create_index('name_idx', {type = 'TREE', unique = true, parts = {{'name', 'string'}}})
+    g.space:create_index('name_idx', {
+        type = 'TREE',
+        unique = true,
+        parts = {{'name', 'string'}}
+    })
+
     local func_body = [[
         function(tuple)
             local address = string.split(tuple[2])
@@ -761,11 +776,11 @@ function g.test_get_schema_with_default_values()
             is_local = false,
             temporary = false,
             format = {
-                {name = 'field1', type = 'string'},
-                {name = 'field2', type = 'unsigned'},
-                {name = 'field3', type = 'array'},
-                {name = 'field4', type = 'array'},
-                {name = 'map_field', type = 'map'},
+                {is_nullable = false, name = 'field1', type = 'string'},
+                {is_nullable = false, name = 'field2', type = 'unsigned'},
+                {is_nullable = false, name = 'field3', type = 'array'},
+                {is_nullable = false, name = 'field4', type = 'array'},
+                {is_nullable = false, name = 'map_field', type = 'map'},
             },
             indexes = {
                 {

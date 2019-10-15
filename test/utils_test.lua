@@ -13,6 +13,7 @@ function g.test_is_array()
     t.assert_false(ddl_utils.is_array(5))
     t.assert_false(ddl_utils.is_array({a = 4}))
     t.assert_false(ddl_utils.is_array({{'int'}, name = 'a'}))
+    t.assert_false(ddl_utils.is_array({nil, 2, x = 5}))
 end
 
 function g.test_find_first_duplicate()

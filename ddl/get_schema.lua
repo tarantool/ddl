@@ -76,6 +76,11 @@ local function _get_space(box_space)
     ddl_space.temporary = box_space.temporary
     ddl_space.engine = box_space.engine
     ddl_space.format = box_space:format()
+    for _, v in ipairs(ddl_space.format) do
+        if v.is_nullable == nil then
+            v.is_nullable = false
+        end
+    end
 
     local indexes = {}
     for key, index in pairs(box_space.index) do
