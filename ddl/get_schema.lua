@@ -8,7 +8,18 @@ local function _get_index_field_path(space, index_part)
     if not index_part.path then
         return index_field_name
     end
-    return string.format("%s%s", index_field_name, index_part.path)
+
+    local path = index_part.path
+    if string.sub(index_part.path, 1, 1) ~= '.' then
+        path = '.' .. path
+    end
+
+    local str_format = '%s%s'
+    if type(index_field_name) == 'number' then
+        str_format = '%d%s'
+    end
+
+    return string.format(str_format, index_field_name, path)
 end
 
 local function _get_index_parts(space, index_part)
@@ -45,7 +56,12 @@ local function _get_index(box_space, box_index)
 
     ddl_index.dimension = box_index.dimension
     ddl_index.distance = box_index.distance
-    ddl_index.sequnce = box_index.sequnce
+
+    if box_index.sequence_id ~= nil then
+        ddl_index.sequence = box.sequence[box_index.sequence_id]
+        ddl_index.sequence.uid = nil
+        ddl_index.sequence.id = nil
+    end
 
     ddl_index.func = nil
     if box_index.func ~= nil then

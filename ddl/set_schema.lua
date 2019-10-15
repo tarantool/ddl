@@ -33,8 +33,7 @@ local function _set_space(space_name, space)
     local box_space = box.schema.space.create(space_name, {
         engine = space.engine,
         is_local = space.is_local,
-        is_temporary = space.is_temporary,
-        user = space.user,
+        temporary = space.temporary,
         format = space.format,
     })
 

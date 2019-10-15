@@ -31,7 +31,6 @@ format = {
 		engine = vinyl|memtx,
 		is_local = ...,
 		temporary = ...,
-		user = ...,
 		format = {
 			{
 				name = '...',
