@@ -17,11 +17,17 @@ local function _set_index(box_space, ddl_index)
         table.insert(index_parts, index_part)
     end
 
+    local sequence_name = nil
+    if ddl_index.sequence ~= nil then
+        local sequence = box.schema.sequence.create(ddl_index.sequence)
+        sequence_name = sequence.name
+    end
+
     box_space:create_index(ddl_index.name, {
         type = ddl_index.type,
         unique = ddl_index.unique,
         parts = index_parts,
-        seuence = ddl_index.sequence,
+        seuence = sequence_name,
         dimension = ddl_index.dimension,
         distance = ddl_index.distance,
         func = ddl_index.func and ddl_index.func.name,
