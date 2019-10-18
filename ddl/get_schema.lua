@@ -47,26 +47,29 @@ local function _get_index(box_space, box_index)
     local ddl_index = {}
     ddl_index.name = box_index.name
     ddl_index.type = box_index.type
-    ddl_index.unique = box_index.unique
+    ddl_index.unique = box.space._index:get({box_space.id, box_index.id}).opts.unique
 
     ddl_index.parts = {}
     for _, box_index_part in pairs(box_index.parts) do
         table.insert(ddl_index.parts, _get_index_parts(box_space, box_index_part))
     end
 
-    ddl_index.dimension = box_index.dimension
-    ddl_index.distance = box_index.distance
-
-    if box_index.sequence_id ~= nil then
-        ddl_index.sequence = box.sequence[box_index.sequence_id]
-        ddl_index.sequence.uid = nil
-        ddl_index.sequence.id = nil
+    if box_index.type == 'RTREE' then
+        ddl_index.dimension = box_index.dimension
+        ddl_index.distance = box.space._index:get({box_space.id, box_index.id}).opts.distance or 'euclid'
     end
 
-    ddl_index.func = nil
-    if box_index.func ~= nil then
-        ddl_index.func = _get_index_function(box_index.func)
-    end
+    -- TODO implement after
+    -- if box_index.sequence_id ~= nil then
+    --     ddl_index.sequence = box.sequence[box_index.sequence_id]
+    --     ddl_index.sequence.uid = nil
+    --     ddl_index.sequence.id = nil
+    -- end
+
+    -- ddl_index.func = nil
+    -- if box_index.func ~= nil then
+    --     ddl_index.func = _get_index_function(box_index.func)
+    -- end
     return ddl_index
 end
 
@@ -94,10 +97,9 @@ end
 
 local function get_schema()
     local schema = {}
-    for _, space in pairs(box.space) do
-        if space.id >= box.schema.SYSTEM_ID_MAX then
-            schema[space.name] = _get_space(space)
-        end
+
+    for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX }, {iterator = "GE"}) do
+        schema[space.name] = _get_space(box.space[space.name])
     end
 
     return schema

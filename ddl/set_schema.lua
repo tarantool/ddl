@@ -8,6 +8,12 @@ local function _set_index(box_space, ddl_index)
         })
     end
 
+
+
+    if ddl_index.parts == nil then
+        error('Error: index parts is nil')
+    end
+
     local index_parts = {}
     for _, ddl_index_part in ipairs(ddl_index.parts) do
         local index_part = {
@@ -43,6 +49,10 @@ local function _set_space(space_name, space)
         format = space.format,
     })
 
+    if space.indexes == nil then
+        error('Error: Index fields is nil')
+    end
+
     for _, index in ipairs(space.indexes) do
         _set_index(box_space, index)
     end
@@ -50,12 +60,16 @@ local function _set_space(space_name, space)
 end
 
 local function set_schema(spaces)
+    if spaces == nil then
+        return nil, "No spaces applied"
+    end
+
     box.begin()
     for space_name, space in pairs(spaces) do
         local status, data = pcall(_set_space, space_name, space)
         if not status then
             box.rollback()
-            return nil, data
+            return nil, tostring(data)
         end
     end
 

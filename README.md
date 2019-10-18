@@ -69,15 +69,17 @@ format = {
 				}, {
 					name = '...',
 					type = 'RTREE',
+					unique = false,
+					-- can't be unique
 					field = string (this field format must be 'array')
 					dimension = number,
 					distance = 'euclid'|'manhattan',
-					-- can't be unique
 				}, {
 					name = '...',
-					type = BITSET,
-					field = string (this field format must be 'string')
+					unique = false,							
 					-- can't be unique
+					type = BITSET,
+					field = string (this field format must be 'string' or 'unsigned')
 				},
 				...
 			},

@@ -411,8 +411,8 @@ function g.test_with_bitset_index()
                             is_nullable = false,
                             collation = 'unicode_ci'
                         }
-                    }
-                    -- unique is nil
+                    },
+                    unique = false,
                 }
             }
         }
@@ -477,7 +477,8 @@ function g.test_rtree_index()
                         },
                     },
                     dimension = 3,
-                    -- distance = 'euclid', -- ignored in db
+                    distance = 'manhattan',
+                    unique = false,
                 }
             }
         }
@@ -486,6 +487,7 @@ end
 
 
 function g.test_with_function_index()
+    t.skip('not supported yet')
     g.space = box.schema.space.create('functional_index')
     g.space:format({
         {name = 'name', type = 'string', is_nullable = false},
@@ -567,8 +569,8 @@ function g.test_with_function_index()
     })
 end
 
-
 function g.test_sequence_index()
+    t.skip('not supported yet')
     g.space = box.schema.space.create('with_sequence')
     g.space:format({
         {name = 'seq_id', type = 'unsigned', is_nullable = false},
@@ -804,7 +806,7 @@ function g.test_get_schema_with_default_values()
                 },
                 {
                     type = 'RTREE',
-                    unique = nil,
+                    unique = false,
                     name = 'rtree',
                     parts = {
                         {
@@ -814,6 +816,7 @@ function g.test_get_schema_with_default_values()
                         },
                     },
                     dimension = 2,
+                    distance = 'euclid',
                 }
             }
         }
