@@ -1,3 +1,5 @@
+#!/usr/bin/env tarantool
+
 local function array_size(arr)
     local counter = 0
     for _, _ in pairs(arr) do

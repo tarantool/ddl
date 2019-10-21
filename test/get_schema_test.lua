@@ -1,37 +1,14 @@
-local ddl = require('ddl.get_schema')
-local fio = require('fio')
+#!/usr/bin/env tarantool
+
 local t = require('luatest')
+local db = require('test.db')
+local ddl = require('ddl')
 
-local g = t.group('ddl_get_schema')
+local g = t.group('get_schema')
+g.before_all = db.init
+g.setup = db.drop_all
 
-g.before_all = function()
-    g.workdir = fio.tempdir()
-    box.cfg{
-        wal_mode = 'none',
-        work_dir = g.workdir,
-    }
-end
-
-g.after_all = function()
-    fio.rmtree(g.workdir)
-end
-
-g.teardown = function()
-    if g.space ~= nil then
-        g.space:drop()
-    end
-    g.space = nil
-
-    if g.spaces ~= nil then
-        for _, space in pairs(g.spaces) do
-            space:drop()
-        end
-    end
-
-    g.spaces = nil
-end
-
-function g.test_get_schema_valid_ddl_format()
+function g.test_valid_ddl_format()
     g.space = box.schema.space.create('test_schema', {
         engine = 'memtx',
         is_local = false,
@@ -149,10 +126,10 @@ end
 
 function g.test_no_format()
     g.space = box.schema.space.create('no_format')
-    g.space:create_index('primarykey')
-    g.space:create_index('multikey', {
+    g.space:create_index('pk')
+    g.space:create_index('sk', {
         unique = false,
-        parts = {{2, 'string', path = 'data[*].name'}}
+        parts = {{2, 'string'}}
     })
 
     local res = ddl.get_schema()
@@ -163,7 +140,7 @@ function g.test_no_format()
         format = {},
         indexes = {
             {
-                name = 'primarykey',
+                name = 'pk',
                 type = 'TREE',
                 unique = true,
                 parts = {
@@ -175,12 +152,12 @@ function g.test_no_format()
                 }
             },
             {
-                name = 'multikey',
+                name = 'sk',
                 type = 'TREE',
                 unique = false,
                 parts = {
                     {
-                        path = '2.data[*].name',
+                        path = 2,
                         type = 'string',
                         is_nullable = false,
                         collation = nil,
@@ -487,7 +464,7 @@ end
 
 
 function g.test_with_function_index()
-    t.skip('not supported yet')
+    t.skip('Not implemented yet')
     g.space = box.schema.space.create('functional_index')
     g.space:format({
         {name = 'name', type = 'string', is_nullable = false},
@@ -570,7 +547,7 @@ function g.test_with_function_index()
 end
 
 function g.test_sequence_index()
-    t.skip('not supported yet')
+    t.skip('Not implemented yet')
     g.space = box.schema.space.create('with_sequence')
     g.space:format({
         {name = 'seq_id', type = 'unsigned', is_nullable = false},
@@ -621,6 +598,10 @@ function g.test_sequence_index()
 end
 
 function g.test_path()
+    if not db.v(2, 0) then
+        t.skip('No json path support in this tarantool')
+    end
+
     g.space = box.schema.space.create('path_indexes')
     g.space:format({
         {name = 'id', type = 'unsigned', is_nullable = false},

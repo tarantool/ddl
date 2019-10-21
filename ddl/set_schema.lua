@@ -1,3 +1,5 @@
+#!/usr/bin/env tarantool
+
 local function _set_index(box_space, ddl_index)
     if ddl_index.func ~= nil then
         box.schema.func.create(ddl_index.func.name, {

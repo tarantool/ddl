@@ -1,3 +1,5 @@
+#!/usr/bin/env tarantool
+
 local t = require('luatest')
 local ddl_utils = require('ddl.utils')
 
