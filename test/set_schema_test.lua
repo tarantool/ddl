@@ -1,8 +1,12 @@
-local ddl = require('ddl')
-local fio = require('fio')
-local t = require('luatest')
+#!/usr/bin/env tarantool
 
-local g = t.group('ddl_set_schema')
+local t = require('luatest')
+local db = require('test.db')
+local ddl = require('ddl')
+
+local g = t.group('set_schema')
+g.before_all = db.init
+g.setup = db.drop_all
 
 local test_schema = {
     ['test'] = {
@@ -34,29 +38,9 @@ local test_schema = {
     }
 }
 
-g.before_all = function()
-    g.workdir = fio.tempdir()
-    box.cfg{
-        wal_mode = 'none',
-        work_dir = g.workdir,
-    }
-end
-
-g.after_all = function()
-    fio.rmtree(g.workdir)
-end
-
-local function clear_box()
-    for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GE"}) do
-        box.space[space.name]:drop()
-    end
-end
-
-g.teardown = function()
-    clear_box()
-end
-
 local function __test_index_ok(indexes_ddl)
+    db.drop_all()
+
     local schema = table.deepcopy(test_schema)
     schema.test.indexes = indexes_ddl
     local ok, err = ddl.set_schema(schema)
@@ -65,7 +49,6 @@ local function __test_index_ok(indexes_ddl)
 
     local ddl_schema = ddl.get_schema()
     t.assert_equals(ddl_schema, schema)
-    clear_box()
 end
 
 local function assert_error_msg_contains(err_msg, expected)
@@ -78,13 +61,14 @@ local function assert_error_msg_contains(err_msg, expected)
 end
 
 local function __test_index_with_error(indexes_ddl, err_msg)
+    db.drop_all()
+
     local schema = table.deepcopy(test_schema)
     schema.test.indexes = indexes_ddl
 
     local res, err = ddl.set_schema(schema)
     t.assert_nil(res)
     assert_error_msg_contains(err, err_msg)
-    clear_box()
 end
 
 

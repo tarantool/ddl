@@ -1,3 +1,5 @@
+#!/usr/bin/env tarantool
+
 local ddl_get_schema = require('ddl.get_schema')
 local ddl_set_schema = require('ddl.set_schema')
 

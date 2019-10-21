@@ -1,3 +1,5 @@
+#!/usr/bin/env tarantool
+
 local function _set_index(box_space, ddl_index)
     if ddl_index.func ~= nil then
         box.schema.func.create(ddl_index.func.name, {
@@ -7,8 +9,6 @@ local function _set_index(box_space, ddl_index)
             opts = ddl_index.func.opts,
         })
     end
-
-
 
     if ddl_index.parts == nil then
         error('Error: index parts is nil')
