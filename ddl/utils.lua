@@ -18,6 +18,20 @@ local function find_first_duplicate(arr_objects, object_field)
     return nil
 end
 
+local function find_redutant_fields(valid_fields, map)
+    local redutant_fields = {}
+    for k, _ in pairs(map) do
+        if valid_fields[k] == nil then
+            table.insert(redutant_fields, k)
+        end
+    end
+
+    if #redutant_fields > 0 then
+        return redutant_fields
+    end
+    return nil
+end
+
 local function is_array(data)
     if type(data) ~= 'table' then
         return false
@@ -27,6 +41,7 @@ local function is_array(data)
 end
 
 return {
+    find_redutant_fields = find_redutant_fields,
     array_size = array_size,
     find_first_duplicate = find_first_duplicate,
     is_array = is_array,

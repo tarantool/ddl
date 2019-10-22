@@ -8,10 +8,8 @@ local function _set_index(box_space, ddl_index)
         })
     end
 
-
-
     if ddl_index.parts == nil then
-        error('Error: index parts is nil')
+        error('Error: index parts is nil', 0)
     end
 
     local index_parts = {}
@@ -50,7 +48,7 @@ local function _set_space(space_name, space)
     })
 
     if space.indexes == nil then
-        error('Error: Index fields is nil')
+        error('Error: Index fields is nil', 0)
     end
 
     for _, index in ipairs(space.indexes) do
@@ -59,11 +57,7 @@ local function _set_space(space_name, space)
     return true
 end
 
-local function set_schema(spaces)
-    if spaces == nil then
-        return nil, "No spaces applied"
-    end
-
+local function transactional_apply_v2(spaces)
     box.begin()
     for space_name, space in pairs(spaces) do
         local status, data = pcall(_set_space, space_name, space)
@@ -80,7 +74,43 @@ local function set_schema(spaces)
     return true
 end
 
+local function transactional_apply_v1(spaces)
+    local boxes_drop = function(space_names)
+        for _, space_name in ipairs(space_names) do
+            box.space[space_name]:drop()
+        end
+    end
+
+    local applied_spaces = {}
+    for space_name, space in pairs(spaces) do
+        local status, err = pcall(_set_space, space_name, space)
+        if not status then
+            boxes_drop(applied_spaces)
+            return nil, err
+        end
+        table.insert(applied_spaces, space_name)
+    end
+end
+
+local function set_schema(spaces)
+    if spaces == nil then
+        return nil, "No spaces applied"
+    end
+
+    local version = require('tarantool').version
+
+    local t_major = version:match('^(%d+)%.')
+    t_major = tonumber(t_major)
+
+    if t_major >= 2 then
+        return transactional_apply_v2(spaces)
+    else
+        return transactional_apply_v1(spaces)
+    end
+end
+
 
 return {
+    set_space = _set_space,
     set_schema = set_schema,
 }

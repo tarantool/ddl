@@ -26,6 +26,7 @@ build = {
             ['ddl.utils'] = 'ddl/utils.lua',
             ['ddl.get_schema'] = 'ddl/get_schema.lua',
             ['ddl.set_schema'] = 'ddl/set_schema.lua',
+            ['ddl.validator'] = 'ddl/validator.lua',
         },
     },
     copy_directories = {'doc'},

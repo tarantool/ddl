@@ -5,6 +5,7 @@ new_read_globals = {
     'box',
     '_TARANTOOL',
     'tonumber64',
+    'unpack',
     os = {
         fields = {
             'environ',
