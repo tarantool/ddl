@@ -4,107 +4,104 @@ Tarantool ddl module
 ## API
 
  - ### Set spaces format
-	`ddl.set_schema(schema)`
-	- Если какого-то из спейсов не существовало - модуль его создаёт
-	- Если спейс существует, то модуль проверяет его формат/индексы
-	- Если формат/индексы хоть немного отличается - это ошибка
-	- Не удаляет и не изменят индексы
-	- Спейсы, не упомянутые в ddl игнорируются и не проверяются
+    `ddl.set_schema(schema)`
+    - Если какого-то из спейсов не существовало - модуль его создаёт
+    - Если спейс существует, то модуль проверяет его формат/индексы
+    - Если формат/индексы хоть немного отличается - это ошибка
+    - Не удаляет и не изменят индексы
+    - Спейсы, не упомянутые в ddl игнорируются и не проверяются
 
-	Возвращаемое значение: либо true, либо nil, err.
+    Возвращаемое значение: либо true, либо nil, err.
 
   - ### Check compatibility
-	`ddl.check_schema(schema)`
-	  - Проверяет, что set_schema возможен без ошибок
+    `ddl.check_schema(schema)`
+      - Проверяет, что set_schema возможен без ошибок
 
-	Возвращаемое значение: либо true, либо nil, err.
+    Возвращаемое значение: либо true, либо nil, err.
 
   - ### Get spaces format
-	`ddl.get_schema()`
-	- Сканит спейсы, возвращает схему
+    `ddl.get_schema()`
+    - Сканит спейсы, возвращает схему
 
 
 ## Input data fromat
 ```
 format = {
-	spaces = {
-		[space_name] = {
-			engine = vinyl|memtx,
-			is_local = ...,
-			temporary = ...,
-			format = {
-				{
-					name = '...',
-					type = '...',
-					-- unsigned | string | varbinary | integer |
-					-- number | boolean | array | scalar | any | map
-					is_nullable = ...
-				},
-				...
-			},
-			indexes = {
-				-- array of index paramters
-				-- integer keys are used as index.id
-				-- index params depend on index type
-				{
-					name = '...',
-					type = 'TREE'|'HASH',
-					unique = true|false, -- HASH is always unique
-					parts = {
-						-- array of part params
-						{
-							field = string (field name as in space format),
-							path = string (path within field incl. multipath with[*],
-							type = '...',
-							-- unsigned | string | varbinary | integer |
-							-- number | boolean | scalar
-							collation = 'unicode|unicode_ci|...',
-							-- to see full list of collations
-							-- just run box.space._collation:select()
-							is_nullable = true|false,
-						}
-					},
-					sequence = '...', -- sequence_name
-					function = '...', -- function_name
-				}, {
-					name = '...',
-					type = 'RTREE',
-					unique = false,
-					-- can't be unique
-					field = string (this field format must be 'array')
-					dimension = number,
-					distance = 'euclid'|'manhattan',
-				}, {
-					name = '...',
-					unique = false,							
-					-- can't be unique
-					type = BITSET,
-					field = string (this field format must be 'string' or 'unsigned')
-				},
-				...
-			},
-		},
-		...
-	},
-	functions = {
-		[function_name] = {
-			body = '...',
-			is_deterministic = true|false,
-			is_sandboxed = true|false,
-			is_multikey = true|false,
-		},
-		...
-	},
-	sequences = {
-		[seqence_name] = {
-			start
-			min
-			max
-			cycle
-			cache
-			step
+    spaces = {
+        [space_name] = {
+            engine = vinyl|memtx,
+            is_local = ...,
+            temporary = ...,
+            format = {
+                {
+                    name = '...',
+                    type = '...',
+                    -- unsigned | string | varbinary | integer |
+                    -- number | boolean | array | scalar | any | map
+                    is_nullable = ...
+                },
+                ...
+            },
+            indexes = {
+                -- array of index paramters
+                -- integer keys are used as index.id
+                -- index params depend on index type
+                {
+                    type = 'TREE'|'HASH',
+                    name = '...',
+                    unique = true|false, -- hash index is always unique
+                    parts = {
+                        -- array of part params
+                        {
+                            path = string (field_name[.path] within field incl. multipath with[*],
+                            type = '...',
+                            -- unsigned | string | varbinary | integer |
+                            -- number | boolean | scalar
+                            collation = 'unicode|unicode_ci|...',
+                            -- to see full list of collations
+                            -- just run box.space._collation:select()
+                            is_nullable = true|false,
+                        }
+                    },
+                    sequence = '...', -- sequence_name
+                    function = '...', -- function_name
+                }, {
+                    type = 'RTREE',
+                    name = '...',
+                    unique = false, -- rtree can't be unique
+                    field = string (this field format must be 'array')
+                    dimension = number,
+                    distance = 'euclid'|'manhattan',
+                }, {
+                    type = BITSET,
+                    name = '...',
+                    unique = false, -- bitset index can't be unique
+                    field = string (this field format must be 'string' or 'unsigned')
+                },
+                ...
+            },
+        },
+        ...
+    },
+    functions = {
+        [function_name] = {
+            body = '...',
+            is_deterministic = true|false,
+            is_sandboxed = true|false,
+            is_multikey = true|false,
+        },
+        ...
+    },
+    sequences = {
+        [seqence_name] = {
+            start
+            min
+            max
+            cycle
+            cache
+            step
 
-		}
-	}
+        }
+    }
 }
 ```

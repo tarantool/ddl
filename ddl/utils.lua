@@ -1,13 +1,5 @@
 #!/usr/bin/env tarantool
 
-local function array_size(arr)
-    local counter = 0
-    for _, _ in pairs(arr) do
-        counter = counter + 1
-    end
-    return counter
-end
-
 local function find_first_duplicate(arr_objects, object_field)
     local key_map = {}
     for _, object in ipairs(arr_objects) do
@@ -39,12 +31,19 @@ local function is_array(data)
         return false
     end
 
-    return array_size(data) == #data
+    local i = 0
+    for _, _ in pairs(data) do
+        i = i + 1
+        if type(data[i]) == 'nil' then
+            return false
+        end
+    end
+
+    return true
 end
 
 return {
-    find_redutant_fields = find_redutant_fields,
-    array_size = array_size,
-    find_first_duplicate = find_first_duplicate,
     is_array = is_array,
+    find_redutant_fields = find_redutant_fields,
+    find_first_duplicate = find_first_duplicate,
 }

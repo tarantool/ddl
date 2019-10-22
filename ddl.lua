@@ -2,17 +2,10 @@
 
 local ddl_get_schema = require('ddl.get_schema')
 local ddl_set_schema = require('ddl.set_schema')
-local ddl_validator = require('ddl.validator')
-
-local function set_schema(schema)
-    local res, err = ddl_validator.validate(schema)
-    if not res then
-        return nil, err
-    end
-    return ddl_set_schema.set_schema(schema)
-end
+local ddl_check_schema = require('ddl.check_schema')
 
 return {
+    check_schema = ddl_check_schema.check_schema,
+    set_schema = ddl_set_schema.set_schema,
     get_schema = ddl_get_schema.get_schema,
-    set_schema = set_schema,
 }

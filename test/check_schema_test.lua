@@ -1,9 +1,12 @@
-local ddl = require('ddl.validator')
-local fio = require('fio')
-local log = require('log')
+#!/usr/bin/env tarantool
 
 local t = require('luatest')
-local g = t.group('ddl_validate')
+local db = require('test.db')
+local ddl = require('ddl')
+
+local g = t.group('check_schema')
+g.before_all = db.init
+g.setup = db.drop_all
 
 local test_schema = {
     ['test'] = {
@@ -35,36 +38,11 @@ local test_schema = {
     }
 }
 
-g.before_all = function()
-    g.workdir = fio.tempdir()
-    box.cfg{
-        wal_mode = 'none',
-        work_dir = g.workdir,
-    }
-end
-
-
-
-g.after_all = function()
-    fio.rmtree(g.workdir)
-end
-
-local function clear_box()
-    for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GE"}) do
-        box.space[space.name]:drop()
-    end
-end
-
-g.teardown = function()
-    clear_box()
-end
-
-local __test_invalid_ddl(schema, expected_message)
-
-	local res, err = ddl.validate(schema)
-	t.assert_nil(res)
-	t.assert
-end
+-- local function __test_invalid_ddl(schema, expected_message)
+--     -- local res, err = ddl.validate(schema)
+--     -- t.assert_nil(res)
+--     -- t.assert
+-- end
 
 function g.test_invalid_format()
 

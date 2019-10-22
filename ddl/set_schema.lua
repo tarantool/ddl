@@ -1,5 +1,7 @@
 #!/usr/bin/env tarantool
 
+local ddl_check_schema = require('ddl.check_schema')
+
 local function _set_index(box_space, ddl_index)
     if ddl_index.func ~= nil then
         box.schema.func.create(ddl_index.func.name, {
@@ -94,25 +96,32 @@ local function transactional_apply_v1(spaces)
     end
 end
 
-local function set_schema(spaces)
-    if spaces == nil then
-        return nil, "No spaces applied"
+local function set_schema(schema)
+    if type(schema) ~= 'table' then
+        error('Bad argument #1 to ddl.set_schema' ..
+            ' (table expected, got ' .. type(schema) .. ')',
+        2)
     end
 
-    local version = require('tarantool').version
-
-    local t_major = version:match('^(%d+)%.')
-    t_major = tonumber(t_major)
-
-    if t_major >= 2 then
-        return transactional_apply_v2(spaces)
-    else
-        return transactional_apply_v1(spaces)
+    local res, err = ddl_check_schema.check_schema(schema)
+    if not res then
+        return nil, err
     end
+
+    -- local version = require('tarantool').version
+
+    -- local t_major = version:match('^(%d+)%.')
+    -- t_major = tonumber(t_major)
+
+    -- if t_major >= 2 then
+        -- return transactional_apply_v2(spaces)
+    -- else
+        return transactional_apply_v1(schema)
+    -- end
 end
 
 
 return {
-    set_space = _set_space,
+    -- set_space = _set_space,
     set_schema = set_schema,
 }

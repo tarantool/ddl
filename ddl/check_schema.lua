@@ -1,18 +1,6 @@
-local log = require('log')
-local utils = require('ddl.utils')
+#!/usr/bin/env tarantool
 
-local valid_field_types = {
-    unsigned  = true,
-    integer   = true,
-    number    = true,
-    string    = true,
-    scalar    = true,
-    boolean   = true,
-    varbinary = true,
-    array     = true,
-    map       = true,
-    any       = true,
-}
+local utils = require('ddl.utils')
 
 local hash_tree_index_field_types = {
     unsigned  = true,
@@ -24,10 +12,7 @@ local hash_tree_index_field_types = {
     varbinary = true,
 }
 
-local known_engines = {
-    ['memtx'] = true,
-    ['vinyl'] = true,
-}
+
 
 local index_info_map = {
     ['RTREE'] = {
@@ -90,15 +75,16 @@ local function validate_index_uniqueness(index_type, unique)
 end
 
 
-local function validate_format_field(field, idx)
+local function check_field(i, field)
+
     if type(field) ~= 'table' then
-        return nil, string.format("field in space.format with idx '%d' is not a table", idx)
+        return nil, string.format("field in space.format with idx '%d' is not a table", i)
     end
 
     if type(field.name) ~= 'string' then
         return nil, string.format(
             "field in space.format with idx '%d' has incorrect 'name' type '%s', expected 'string'",
-            idx, type(field.name)
+            i, type(field.name)
         )
     end
 
@@ -110,11 +96,24 @@ local function validate_format_field(field, idx)
         )
     end
 
+    local known_field_types = {
+        unsigned  = true,
+        integer   = true,
+        number    = true,
+        string    = true,
+        scalar    = true,
+        boolean   = true,
+        varbinary = true,
+        array     = true,
+        map       = true,
+        any       = true,
+    }
+
     -- here check string regexp name
-    if valid_field_types[field.type] == nil then
+    if known_field_types[field.type] == nil then
         return nil, string.format(
             "field in space.format with name '%s' has incorrect type '%s'",
-            field.name, field.type or 'nil'
+            field.name, field.type
         )
     end
 
@@ -124,11 +123,12 @@ local function validate_format_field(field, idx)
             field.name, field.is_nullable
         )
     end
+
     return true
 end
 
 
-local function validate_index_part(index, idx, space_info)
+local function check_index_part(index, idx, space_info)
     local part = index.parts[idx]
     if type(part) ~= 'table' then
         return nil, string.format('part with idx %d is not a table', idx)
@@ -154,7 +154,7 @@ local function validate_index_part(index, idx, space_info)
     local field_name, json_path = unpack(string.split(part.path, '.', 1))
     local index_info = index_info_map[index.type]
     local format_field = space_info.fields[field_name]
-    if not format_field then 
+    if not format_field then
         return nil, string.format(
             "part with idx '%d' references to missing fieild in format '%s'",
             idx, field_name
@@ -234,15 +234,118 @@ local function validate_primary_index(index)
     return true
 end
 
-local function validate_index(index, idx, space_info)
+local function check_index(i, index, space)
     if type(index) ~= 'table' then
-        return nil, string.format("space.index with index '%d' is not a table", idx)
+        return nil, string.format(
+            'space[%q]: bad argument indexes[%d] ' ..
+            '(table expected, got %s)',
+            space.name, i, type(index)
+        )
     end
 
     if type(index.name) ~= 'string' then
         return nil, string.format(
-            "space.index with index '%d' has incorrect name, it must be a string type", idx
+            'space[%q].indexes[%d]: bad argument "name"' ..
+            ' (string expected, got %s)',
+            space.name, i, type(index.name)
         )
+    end
+
+    if type(index.type) ~= 'string' then
+        return nil, string.format(
+            'space[%q].indexes[%q]: bad argument "type"' ..
+            ' (string expected, got %s)',
+            space.name, index.name, type(index.type)
+        )
+    end
+
+    local known_index_types = {
+        TREE = true,
+        HASH = true,
+        RTREE = true,
+        BITSET = true,
+    }
+    if not known_index_types[index.type] then
+        return nil, string.format(
+            "space[%q].indexes[%q]: unknown type %q",
+            space.name, index.name, index.type
+        )
+    end
+
+    if type(index.unique) ~= 'boolean' then
+        return nil, string.format(
+            'space[%q].indexes[%q]: bad argument "unique"' ..
+            ' (boolean expected, got %s)',
+            space.name, index.name, type(index.unique)
+        )
+    end
+
+    if space.engine == 'vinyl' and index.type ~= 'TREE' then
+        return nil, string.format(
+            "space[%q].indexes[%q]: vinyl engine doesn't support %s indexes",
+            space.name, index.name, index.type
+        )
+    end
+
+    if index.type == 'TREE' then
+        if i == 1 and index.unique ~= true then
+            return nil, string.format(
+                'space[%q].indexes[%q] (TREE): primary index must be unique',
+                space.name, index.name
+            )
+        end
+
+        if not utils.is_array(index.parts) then
+            return nil, string.format(
+                'space[%q].indexes[%q] (TREE): bad argument "parts"' ..
+                ' (contiguous array of tables expected, got %s)',
+                space.name, index.name, type(index.parts)
+            )
+        end
+        for i, _ in ipairs(index.parts) do
+            local res, err = check_index_part(i, index, space)
+            if not res then
+                return nil, string.format("in index '%s' %s", index.name, err)
+            end
+        end
+
+    elseif index.type == 'HASH' then
+        if index.unique ~= true then
+            return nil, string.format(
+                'space[%q].indexes[%q]: HASH index must be unique',
+                space.name, index.name
+            )
+        end
+
+    elseif index.type == 'RTREE' then
+        if i == 1 then
+            return nil, string.format(
+                "space[%q].indexes[%q]: RTREE index can't be primary",
+                space.name, index.name
+            )
+        end
+
+        if index.unique ~= false then
+            return nil, string.format(
+                "space[%q].indexes[%q]: RTREE index can't be unique",
+                space.name, index.name
+            )
+        end
+
+    elseif index.type == 'BITSET' then
+        if i == 1 then
+            return nil, string.format(
+                "space[%q].indexes[%q]: BITSET index can't be primary",
+                space.name, index.name
+            )
+        end
+
+        if index.unique ~= false then
+            return nil, string.format(
+                "space[%q].indexes[%q]: BITSET index can't be unique",
+                space.name, index.name
+            )
+        end
     end
 
     local redutant_fields = utils.find_redutant_fields(valid_index, index)
@@ -253,41 +356,41 @@ local function validate_index(index, idx, space_info)
         )
     end
 
-    local index_info = index_info_map[index.type]
-    if (not index_info) or (not index_info.engine[space_info.engine]) then
-        return nil, string.format("space.index '%s' has incorect type '%s'", index.name, index.type or 'nil')
-    end
+    -- local index_info = index_info_map[index.type]
+    -- if (not index_info) or (not index_info.engine[space_info.engine]) then
+    --     return nil, string.format("space.index '%s' has incorect type '%s'", index.name, index.type or 'nil')
+    -- end
 
-    if type(index.unique) ~= 'boolean' then
-        return nil, string.format(
-            "space.index '%s' has incorect unique field, it must be set and its boolean type"
-        )
-    end
+    -- if type(index.unique) ~= 'boolean' then
+    --     return nil, string.format(
+    --         "space.index '%s' has incorect unique field, it must be set and its boolean type"
+    --     )
+    -- end
 
-    if not validate_index_uniqueness(index.type, index.unique) then
-        return nil, string.format(
-            "space.index '%s' with type = '%s' doesn't alows 'unique=%s'",
-            index.name, index.type, index.unique
-        )
-    end
+    -- if not validate_index_uniqueness(index.type, index.unique) then
+    --     return nil, string.format(
+    --         "space.index '%s' with type = '%s' doesn't alows 'unique=%s'",
+    --         index.name, index.type, index.unique
+    --     )
+    -- end
 
-    if not utils.is_array(index.parts) then
-        return nil, string.format("space.index '%s' has incorect parts, it must be an array", index.name)
-    end
+    -- if not utils.is_array(index.parts) then
+    --     return nil, string.format("space.index '%s' has incorect parts, it must be an array", index.name)
+    -- end
 
-    if not index_info.is_multipart and #index.parts > 1 then
-        return nil, string.format(
-            "space.index '%s' with type '%s' can't be multipart (parts must contain only one value)",
-            index.name, index.type
-        )
-    end
+    -- if not index_info.is_multipart and #index.parts > 1 then
+    --     return nil, string.format(
+    --         "space.index '%s' with type '%s' can't be multipart (parts must contain only one value)",
+    --         index.name, index.type
+    --     )
+    -- end
 
-    for i, _ in ipairs(index.parts) do
-        local res, err = validate_index_part(index, i, space_info)
-        if not res then
-            return nil, string.format("in index '%s' %s", index.name, err)
-        end
-    end
+    -- for i, _ in ipairs(index.parts) do
+    --     local res, err = check_index_part(index, i, space_info)
+    --     if not res then
+    --         return nil, string.format("in index '%s' %s", index.name, err)
+    --     end
+    -- end
 
     if idx == 1 then
         return validate_primary_index(index)
@@ -297,7 +400,7 @@ local function validate_index(index, idx, space_info)
 end
 
 
-local function validate_space(space)
+local function check_space(space)
     if type(space) ~= 'table' then
         return nil, 'space is not a table'
     end
@@ -310,6 +413,10 @@ local function validate_space(space)
         )
     end
 
+    local known_engines = {
+        ['memtx'] = true,
+        ['vinyl'] = true,
+    }
     if not known_engines[space.engine] then
         return nil, string.format("space.engine '%s' is unknown", space.engine or 'nil')
     end
@@ -326,33 +433,37 @@ local function validate_space(space)
         end
     end
 
-    if not utils.is_array(space.format) then
-        return nil, 'space.format is not an array'
-    end
+    -- auxiliary kv-map to help indexes validation
+    local space_fields = {}
 
-    for _, format_field in ipairs(space.format) do
-        local res, err = validate_format_field(format_field)
-        if not res then
+    -- Check space.format fields
+    if not utils.is_array(space.format) then
+        return nil, "???"
+    end
+    for i, field_params in ipairs(space.format) do
+        local ok, err = check_field(i, field_params)
+        if not ok then
             return nil, err
         end
+
+        space_fields[field_params.name] = {
+            type = field_params.type,
+            is_nullable = field_params.is_nullable,
+        }
     end
 
+    -- Check indexes
     if not utils.is_array(space.indexes) then
         return nil, 'space.indexes is not an array'
     end
-
-    local space_info = {
-        engine = space.engine,
-        fields = {}
-    }
-
-    for _, field in ipairs(space.format) do
-        space_info.fields[field.name] = {type = field.type, is_nullable = field.is_nullable}
-    end
-
     for i, index in ipairs(space.indexes) do
-        local res, err = validate_index(index, i, space_info)
-        if not res then
+        local ok, err = check_index(i, index, {
+            name = space.name,
+            engine = space.engine,
+            fields = space_fields,
+        })
+
+        if not ok then
             return nil, err
         end
     end
@@ -387,14 +498,14 @@ local function validate_with_apply(schema)
 end
 
 
-local function validate(schema)
+local function check_schema(schema)
     local error_msg = 'Validation error: '
     if type(schema) ~= 'table' then
         return nil, error_msg .. 'scheme is not a table'
     end
 
     for space_name, space in pairs(schema) do
-        local res, err = validate_space(space)
+        local res, err = check_space(space)
         if not res then
             return nil, string.format("Error in space '%s': %s", space_name, err)
         end
@@ -404,5 +515,5 @@ local function validate(schema)
 end
 
 return {
-    validate = validate,
+    check_schema = check_schema,
 }
