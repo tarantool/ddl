@@ -44,8 +44,30 @@ local test_schema = {
 --     -- t.assert
 -- end
 
-function g.test_invalid_format()
 
+function g.test_invalid_format()
+    local schema = table.deepcopy(test_schema)
+    schema.test.indexes = {
+        {
+            type = 'HASH',
+            name = 't',
+            unique = true,
+            parts = {{
+                path = 'unsigned_nonnull', type = 'unsigned', is_nullable = false,
+            }}
+        },
+        {
+            name = 'r',
+            type = 'RTREE',
+            field = 'map_nonnull.data[*].name',
+            unique = false,
+        }
+    }
+
+    local log = require('log')
+    local res, err = ddl.check_schema(schema)
+    log.info(res)
+    log.info(err)
 end
 
 function g.test_invalid_index_reference()
