@@ -29,16 +29,16 @@ Tarantool ddl module
 format = {
     spaces = {
         [space_name] = {
-            engine = vinyl|memtx,
-            is_local = ...,
-            temporary = ...,
+            engine = 'vinyl' | 'memtx',
+            is_local = true | false,
+            temporary = true | false,
             format = {
                 {
                     name = '...',
-                    type = '...',
-                    -- unsigned | string | varbinary | integer |
-                    -- number | boolean | array | scalar | any | map
-                    is_nullable = ...
+                    is_nullable = true | false,
+                    type = 'unsigned' | 'string' | 'varbinary' |
+                            'integer' | 'number' | 'boolean' |
+                            'array' | 'scalar' | 'any' | 'map'
                 },
                 ...
             },
@@ -57,7 +57,9 @@ format = {
                             type = '...',
                             -- unsigned | string | varbinary | integer |
                             -- number | boolean | scalar
-                            collation = 'unicode|unicode_ci|...',
+                            collation = nil|'none'|'unicode'|'unicode_ci'|...,
+                            -- collation must be set, if and only if
+                            -- type =
                             -- to see full list of collations
                             -- just run box.space._collation:select()
                             is_nullable = true|false,

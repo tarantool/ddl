@@ -3,6 +3,7 @@
 local t = require('luatest')
 local db = require('test.db')
 local ddl = require('ddl')
+local log = require('log')
 
 local g = t.group('set_schema')
 g.before_all = db.init
@@ -38,20 +39,47 @@ local test_schema = {
     }
 }
 
-local function __test_index_ok(indexes_ddl)
+local function _test_index(indexes_ddl, error_expected)
     db.drop_all()
 
     local schema = table.deepcopy(test_schema)
     schema.test.indexes = indexes_ddl
-    local ok, err = ddl.set_schema(schema)
-    t.assert_nil(err)
-    t.assert_true(ok)
 
-    local ddl_schema = ddl.get_schema()
-    t.assert_equals(ddl_schema, schema)
+    local ok, err = ddl.set_schema(schema)
+    if not error_expected then
+        if not ok then
+            error(err, 2)
+        end
+
+        local ddl_schema = ddl.get_schema()
+        local ok, err = pcall(t.assert_equals,
+            ddl_schema.test.indexes, schema.test.indexes,
+            nil, -- message
+            true -- deep_analysis
+        )
+        if not ok then
+            error(err, 2)
+        end
+    else
+        if ok then
+            error("ddl.set_schema() succeded, but it shouldn't", 2)
+        end
+
+        if err ~= error_expected then
+        -- if not string.find(err, error_expected, 1, true) then
+            local e = string.format(
+                "Mismatching error message:\n" ..
+                "expected: %s\n" ..
+                "  actual: %s\n",
+                err, error_expected
+            )
+            log.error('\n%s', e)
+            -- error(e, 2)
+        end
+    end
 end
 
-local function assert_error_msg_contains(err_msg, expected)
+local function assert_error_msg_contains(err_msg, expected, level)
     if not string.find(err_msg, expected, 1, true) then
         error(string.format(
             "Error message:\n %s\ndoesn't contains:\n %s\n",
@@ -59,18 +87,6 @@ local function assert_error_msg_contains(err_msg, expected)
         ), 2)
     end
 end
-
-local function __test_index_with_error(indexes_ddl, err_msg)
-    db.drop_all()
-
-    local schema = table.deepcopy(test_schema)
-    schema.test.indexes = indexes_ddl
-
-    local res, err = ddl.set_schema(schema)
-    t.assert_nil(res)
-    assert_error_msg_contains(err, err_msg)
-end
-
 
 function g.test_hash_index()
     local pk = {
@@ -87,80 +103,70 @@ function g.test_hash_index()
         },
     }
 
-    __test_index_ok({
-        pk,
-        {
-            type = 'HASH',
-            unique = true,
-            name = 'secondary',
-            parts = {
-                {
-                    path = 'unsigned_nonnull',
-                    type = 'unsigned',
-                    is_nullable = false,
-                },
+    _test_index({pk, {
+        type = 'HASH',
+        unique = true,
+        name = 'secondary',
+        parts = {
+            {
+                path = 'unsigned_nonnull',
+                type = 'unsigned',
+                is_nullable = false,
             },
-        }
-    })
+        },
+    }})
 
-    __test_index_ok({
-        pk,
-        {
-            type = 'HASH',
-            unique = true,
-            name = 'secondary',
-            parts = {
-                {
-                    path = 'unsigned_nonnull',
-                    type = 'unsigned',
-                    is_nullable = false,
-                },
-                {
-                    path = 'number_nonnull',
-                    type = 'number',
-                    is_nullable = false,
-                }
+    _test_index({pk, {
+        type = 'HASH',
+        unique = true,
+        name = 'secondary',
+        parts = {
+            {
+                path = 'unsigned_nonnull',
+                type = 'unsigned',
+                is_nullable = false,
             },
-        }
-    })
+            {
+                path = 'number_nonnull',
+                type = 'number',
+                is_nullable = false,
+            }
+        },
+    }})
 
-    __test_index_with_error({
-        pk,
-        {
-            type = 'HASH',
-            name = 'secondary',
-            unique = false,
-            parts = {
-                {
-                    path = 'string_nonnull',
-                    type = 'string',
-                    is_nullable = false,
-                    collation = 'unicode',
-                },
+    _test_index({pk, {
+        type = 'HASH',
+        name = 'secondary',
+        unique = false,
+        parts = {
+            {
+                path = 'string_nonnull',
+                type = 'string',
+                is_nullable = false,
+                collation = 'unicode',
             },
-        }},
-        "Can't create or modify index 'secondary' in space 'test': HASH index must be unique"
+        },
+    }},
+        "Can't create or modify index 'secondary'" ..
+        " in space 'test': HASH index must be unique"
     )
 
-    __test_index_with_error({
-        pk,
-        {
-            type = 'HASH',
-            name = 'secondary',
-            unique = true,
-            parts = {
-                {
-                    path = 'string_nullable',
-                    type = 'string',
-                    is_nullable = true,
-                    collation = 'unicode',
-                },
+    _test_index({pk, {
+        type = 'HASH',
+        name = 'secondary',
+        unique = true,
+        parts = {
+            {
+                path = 'string_nullable',
+                type = 'string',
+                is_nullable = true,
+                collation = 'unicode',
             },
-        }},
+        },
+    }},
         "HASH does not support nullable parts"
     )
 end
-
 
 function g.test_tree_index()
     local pk  = {
@@ -176,57 +182,48 @@ function g.test_tree_index()
         },
     }
 
-    __test_index_ok({
-        pk,
-        {
-            type = 'TREE',
-            unique = true,
-            name = 'secondary',
-            parts = {
-                {
-                    path = 'number_nonnull',
-                    type = 'number',
-                    is_nullable = false,
-                }
+    _test_index({pk, {
+        type = 'TREE',
+        unique = true,
+        name = 'secondary',
+        parts = {
+            {
+                path = 'number_nonnull',
+                type = 'number',
+                is_nullable = false,
             }
         }
-    })
+    }})
 
-    __test_index_ok({
-        pk,
-        {
-            type = 'TREE',
-            unique = false,
-            name = 'secondary',
-            parts = {
-                {
-                    path = 'number_nullable',
-                    type = 'number',
-                    is_nullable = true,
-                }
+    _test_index({pk, {
+        type = 'TREE',
+        unique = false,
+        name = 'secondary',
+        parts = {
+            {
+                path = 'number_nullable',
+                type = 'number',
+                is_nullable = true,
             }
         }
-    })
+    }})
 
-    __test_index_ok({
-        pk,
-        {
-            type = 'TREE',
-            unique = false,
-            name = 'secondary',
-            parts = {
-                {
-                    path = 'number_nullable',
-                    type = 'number',
-                    is_nullable = true,
-                }, {
-                    path = 'integer_nullable',
-                    type = 'integer',
-                    is_nullable = true,
-                }
+    _test_index({pk, {
+        type = 'TREE',
+        unique = false,
+        name = 'secondary',
+        parts = {
+            {
+                path = 'number_nullable',
+                type = 'number',
+                is_nullable = true,
+            }, {
+                path = 'integer_nullable',
+                type = 'integer',
+                is_nullable = true,
             }
         }
-    })
+    }})
 end
 
 
@@ -239,131 +236,121 @@ function g.test_bitset_index()
             {
                 path = 'string_nonnull',
                 type = 'string',
+                -- collation = 'none',
                 is_nullable = false,
             }
         },
     }
 
-    __test_index_ok({
-            pk,
+    _test_index({pk, {
+        type = 'BITSET',
+        unique = false,
+        name = 'secondary',
+        parts = {
             {
-                type = 'BITSET',
-                unique = false,
-                name = 'secondary',
-                parts = {
-                    {
-                        path = 'string_nonnull',
-                        type = 'string',
-                        is_nullable = false,
-                    }
-                }
+                path = 'string_nonnull',
+                type = 'string',
+                -- collation = 'none',
+                is_nullable = false,
             }
         }
+    }})
+
+    _test_index({pk, {
+        type = 'BITSET',
+        name = 'secondary',
+        unique = false,
+        parts = {
+            {
+                path = 'unsigned_nonnull',
+                type = 'unsigned',
+                is_nullable = false,
+            }
+        }
+    }})
+
+    _test_index({pk, {
+        type = 'BITSET',
+        name = 'secondary',
+        unique = true,
+        parts = {
+            {
+                path = 'string_nonnull',
+                type = 'string',
+                is_nullable = false,
+            }
+        }
+    }},
+        "Can't create or modify index 'secondary'" ..
+        " in space 'test': BITSET can not be unique"
     )
 
-    __test_index_ok({
-        pk,
-        {
-            type = 'BITSET',
-            name = 'secondary',
-            unique = false,
-            parts = {
-                {
-                    path = 'unsigned_nonnull',
-                    type = 'unsigned',
-                    is_nullable = false,
-                }
+    _test_index({{
+        type = 'BITSET',
+        name = 'primary',
+        unique = false,
+        parts = {
+            {
+                path = 'string_nonnull',
+                type = 'string',
+                is_nullable = false,
             }
-        }}
+        }
+    }},
+        "Can't create or modify index 'primary'" ..
+        " in space 'test': primary key must be unique"
     )
 
-    __test_index_with_error({
-        pk,
-        {
-            type = 'BITSET',
-            name = 'secondary',
-            unique = true,
-            parts = {
-                {
-                    path = 'string_nonnull',
-                    type = 'string',
-                    is_nullable = false,
-                }
+    _test_index({pk, {
+        type = 'BITSET',
+        name = 'secondary',
+        unique = false,
+        parts = {
+            {
+                path = 'integer_nonnull',
+                type = 'integer',
+                is_nullable = false,
             }
-        }},
-        "Can't create or modify index 'secondary' in space 'test': BITSET can not be unique"
+        }
+    }},
+        "Can't create or modify index 'secondary'" ..
+        " in space 'test': BITSET index field type must be NUM or STR"
     )
 
-    __test_index_with_error({
-        {
-            type = 'BITSET',
-            name = 'primary',
-            unique = false,
-            parts = {
-                {
-                    path = 'string_nonnull',
-                    type = 'string',
-                    is_nullable = false,
-                }
+    _test_index({pk, {
+        type = 'BITSET',
+        name = 'secondary',
+        unique = false,
+        parts = {
+            {
+                path = 'string_nonnull',
+                type = 'string',
+                is_nullable = true,
             }
-        }},
-        "Can't create or modify index 'primary' in space 'test': primary key must be unique"
-    )
-
-    __test_index_with_error({
-        pk,
-        {
-            type = 'BITSET',
-            name = 'secondary',
-            unique = false,
-            parts = {
-                {
-                    path = 'integer_nonnull',
-                    type = 'integer',
-                    is_nullable = false,
-                }
-            }
-        }},
-        "Can't create or modify index 'secondary' in space 'test': BITSET index field type must be NUM or STR"
-    )
-
-    __test_index_with_error({
-        pk,
-        {
-            type = 'BITSET',
-            name = 'secondary',
-            unique = false,
-            parts = {
-                {
-                    path = 'string_nonnull',
-                    type = 'string',
-                    is_nullable = true,
-                }
-            }
-        }},
+        }
+    }},
         "BITSET does not support nullable parts"
     )
 
-    __test_index_with_error({
-        pk,
-        {
-            type = 'BITSET',
-            unique = false,
-            name = 'secondary',
-            parts = {
-                {
-                    path = 'string_nonnull',
-                    type = 'string',
-                    is_nullable = false,
-                },
-                {
-                    path = 'string_nullable',
-                    type = 'string',
-                    is_nullable = false,
-                }
+    _test_index({pk, {
+        type = 'BITSET',
+        unique = false,
+        name = 'secondary',
+        parts = {
+            {
+                path = 'string_nonnull',
+                type = 'string',
+                is_nullable = false,
+            },
+            {
+                path = 'string_nullable',
+                type = 'string',
+                is_nullable = false,
             }
-        }},
-        "Can't create or modify index 'secondary' in space 'test': BITSET index key can not be multipart"
+        }
+    }},
+        "Can't create or modify index 'secondary'" ..
+        " in space 'test': BITSET index key can not be multipart"
     )
 end
 
@@ -373,133 +360,107 @@ function g.test_rtree_index()
         type = 'TREE',
         unique = true,
         name = 'primary',
-        parts = {
-            {
-                path = 'string_nonnull',
-                type = 'string',
-                is_nullable = false,
-            }
-        },
+        parts = {{
+            path = 'string_nonnull',
+            type = 'string',
+            is_nullable = false,
+        }}
     }
 
-    __test_index_ok({
-        pk,
-        {
-            type = 'RTREE',
-            name = 'secondary',
-            unique = false,
-            distance = 'manhattan',
-            dimension = 8,
-            parts = {
-                {
-                    path = 'array_nonnull',
-                    type = 'array',
-                    is_nullable = false,
-                }
-            }
+    _test_index({pk, {
+        type = 'RTREE',
+        name = 'secondary',
+        unique = false,
+        distance = 'manhattan',
+        dimension = 8,
+        parts = {{
+            path = 'array_nonnull',
+            type = 'array',
+            is_nullable = false,
         }}
-    )
+    }})
 
-    __test_index_with_error({
-        pk,
-        {
-            type = 'RTREE',
-            name = 'secondary',
-            unique = false,
-            distance = 'manhattan',
-            dimension = 8,
-            parts = {
-                {
-                    path = 'array_nonnull',
-                    type = 'array',
-                    is_nullable = true,
-                }
-            }
-        }},
+    _test_index({pk, {
+        type = 'RTREE',
+        name = 'secondary',
+        unique = false,
+        distance = 'manhattan',
+        dimension = 8,
+        parts = {{
+            path = 'array_nonnull',
+            type = 'array',
+            is_nullable = true,
+        }}
+    }},
         "RTREE does not support nullable parts"
     )
 
-    __test_index_with_error({
-        pk,
-        {
-            type = 'RTREE',
-            name = 'secondary',
-            unique = false,
-            distance = 'not_existing',
-            dimension = 8,
-            parts = {
-                {
-                    path = 'array_nonnull',
-                    type = 'array',
-                    is_nullable = false,
-                }
-            }
-        }},
+    _test_index({pk, {
+        type = 'RTREE',
+        name = 'secondary',
+        unique = false,
+        distance = 'not_existing',
+        dimension = 8,
+        parts = {{
+            path = 'array_nonnull',
+            type = 'array',
+            is_nullable = false,
+        }}
+    }},
         "Wrong index options (field 4): distance must be either 'euclid' or 'manhattan'"
     )
 
-    __test_index_with_error({
-        pk,
-        {
-            type = 'RTREE',
-            name = 'secondary',
-            unique = false,
-            distance = 'euclid',
-            dimension = -9,
-            parts = {
-                {
-                    path = 'array_nonnull',
-                    type = 'array',
-                    is_nullable = false,
-                }
-            }
-        }},
+    _test_index({pk, {
+        type = 'RTREE',
+        name = 'secondary',
+        unique = false,
+        distance = 'euclid',
+        dimension = -9,
+        parts = {{
+            path = 'array_nonnull',
+            type = 'array',
+            is_nullable = false,
+        }}
+    }},
         "Index 'secondary' (RTREE) of space 'test' (memtx) does not" ..
          " support dimension (-9): must belong to range [1, 20]"
     )
 
-    __test_index_with_error({
-        pk,
-        {
-            type = 'RTREE',
-            name = 'secondary',
-            unique = false,
-            distance = 'manhattan',
-            dimension = 10,
-            parts = {
-                {
-                    path = 'string_nonnull',
-                    type = 'string',
-                    is_nullable = false,
-                }
-
-            }
-        }},
-        "Can't create or modify index 'secondary' in space 'test': RTREE index field type must be ARRAY"
+    _test_index({pk, {
+        type = 'RTREE',
+        name = 'secondary',
+        unique = false,
+        distance = 'manhattan',
+        dimension = 10,
+        parts = {{
+            path = 'string_nonnull',
+            type = 'string',
+            is_nullable = false,
+        }}
+    }},
+        "Can't create or modify index 'secondary'" ..
+        " in space 'test': RTREE index field type must be ARRAY"
     )
 
-    __test_index_with_error({
-        pk,
+    _test_index({pk, {
+        type = 'RTREE',
+        name = 'secondary',
+        unique = false,
+        distance = 'manhattan',
+        dimension = 10,
+        parts = {{
+            path = 'array_nonnull',
+            type = 'array',
+            is_nullable = false,
+        },
         {
-            type = 'RTREE',
-            name = 'secondary',
-            unique = false,
-            distance = 'manhattan',
-            dimension = 10,
-            parts = {
-                {
-                    path = 'array_nonnull',
-                    type = 'array',
-                    is_nullable = false,
-                },
-                {
-                    path = 'array_nullable',
-                    type = 'array',
-                    is_nullable = false,
-                }
-            }
-        }},
-        "Can't create or modify index 'secondary' in space 'test': RTREE index key can not be multipart"
+            path = 'array_nullable',
+            type = 'array',
+            is_nullable = false,
+        }}
+    }},
+        "Can't create or modify index 'secondary'" ..
+        " in space 'test': RTREE index key can not be multipart"
     )
 end
 
@@ -509,20 +470,25 @@ function g.test_path()
         name = 'primary',
         type = 'TREE',
         unique = true,
-        parts = {{is_nullable = false, path = 'unsigned_nullable', type = 'unsigned'}},
+        parts = {{
+            path = 'unsigned_nullable',
+            type = 'unsigned',
+            is_nullable = false,
+        }},
     }
 
-    __test_index_ok({
-        pk,
-        {
-            name = 'path_idx',
-            type = 'TREE',
-            unique = true,
-            parts = {{path = 'map_nonnull.DATA["name"]', type = 'string', is_nullable = false}}
-        }
-    })
+    _test_index({pk, {
+        name = 'path_idx',
+        type = 'TREE',
+        unique = true,
+        parts = {{
+            path = 'map_nonnull.DATA["name"]',
+            type = 'string',
+            is_nullable = false,
+        }}
+    }})
 
-    __test_index_ok({
+    _test_index({
         pk,
         {
             name = 'path_idx',
@@ -532,7 +498,7 @@ function g.test_path()
         }
     })
 
-    __test_index_ok({
+    _test_index({
         pk,
         {
             name = 'path_idx',
@@ -542,7 +508,7 @@ function g.test_path()
         }
     })
 
-    __test_index_ok({
+    _test_index({
         pk,
         {
             name = 'path_idx',
@@ -554,7 +520,7 @@ function g.test_path()
         }
     })
 
-    __test_index_with_error({
+    _test_index({
         {
             name = 'path_idx',
             type = 'TREE',
@@ -564,15 +530,18 @@ function g.test_path()
         "Field 1 has type 'unsigned' in one index, but type 'map' in another"
     )
 
-    __test_index_with_error({
-        pk,
-        {
-            name = 'path_idx',
-            type = 'TREE',
-            unique = true,
-            parts = {{path = 'empty.DATA["name"]', type = 'string', is_nullable = false}}
-        }},
-        [[Illegal parameters, options.parts[1]: field was not found by name 'empty.DATA["name"]']]
+    _test_index({pk, {
+        name = 'path_idx',
+        type = 'TREE',
+        unique = true,
+        parts = {{
+            path = 'empty.DATA["name"]',
+            type = 'string',
+            is_nullable = false,
+        }}
+    }},
+        [[Illegal parameters, options.parts[1]: ]] ..
+        [[field was not found by name 'empty.DATA["name"]']]
     )
 end
 
@@ -585,7 +554,7 @@ function g.test_multikey_path()
         parts = {{is_nullable = false, path = 'unsigned_nullable', type = 'unsigned'}},
     }
 
-    __test_index_ok({
+    _test_index({
         pk,
         {
             type = 'TREE',
@@ -602,7 +571,7 @@ function g.test_multikey_path()
         }}
     )
 
-    __test_index_with_error({
+    _test_index({
         pk,
         {
             type = 'TREE',
@@ -620,7 +589,7 @@ function g.test_multikey_path()
         "Illegal parameters, options.parts[1]: field was not found by name 'empty.data[*].path'"
     )
 
-    __test_index_with_error({
+    _test_index({
         pk,
         {
             type = 'BITSET',
@@ -638,7 +607,7 @@ function g.test_multikey_path()
         "Can't create or modify index 'secondary' in space 'test': BITSET index cannot be multikey"
     )
 
-    __test_index_with_error({
+    _test_index({
         pk,
         {
             type = 'HASH',
@@ -656,7 +625,7 @@ function g.test_multikey_path()
         "Can't create or modify index 'secondary' in space 'test': HASH index cannot be multikey"
     )
 
-    __test_index_with_error({
+    _test_index({
         pk,
         {
             type = 'RTREE',
@@ -686,7 +655,7 @@ function g.test_erroneous_type_in_format()
 end
 
 function g.test_erroneous_type_in_index_field()
-    __test_index_with_error({
+    _test_index({
         {
             type = 'HASH',
             unique = true,
@@ -696,7 +665,7 @@ function g.test_erroneous_type_in_index_field()
         "Wrong index options (field 1): index part: unknown field type"
     )
 
-    __test_index_with_error({
+    _test_index({
         {
             type = 'HASH',
             unique = true,
@@ -708,7 +677,7 @@ function g.test_erroneous_type_in_index_field()
 end
 
 function g.test_erroneous_index_type()
-    __test_index_with_error({
+    _test_index({
         {
             type = 'BTREE',
             unique = true,
@@ -720,7 +689,7 @@ function g.test_erroneous_index_type()
 end
 
 function g.test_primary_key_error()
-    __test_index_with_error({
+    _test_index({
         {
             type = 'TREE',
             unique = false,
@@ -730,7 +699,7 @@ function g.test_primary_key_error()
         "Can't create or modify index 'primary' in space 'test': primary key must be unique"
     )
 
-    __test_index_with_error({
+    _test_index({
         {
             type = 'TREE',
             unique = true,
@@ -741,7 +710,7 @@ function g.test_primary_key_error()
     )
 
 
-    __test_index_with_error({
+    _test_index({
         {
             type = 'TREE',
             unique = true,
@@ -764,7 +733,7 @@ function g.test_missing_ddl_index_parts()
 
     local res, err =  ddl.set_schema(schema)
     t.assert_nil(res)
-    assert_error_msg_contains(err, "Error: index parts is nil")
+    assert_error_msg_contains(err, "index parts is nil")
 end
 
 function g.test_missing_format()
@@ -792,7 +761,7 @@ function g.test_missing_indexes()
 
     local res, err =  ddl.set_schema(schema)
     t.assert_nil(res)
-    assert_error_msg_contains(err, "Error: Index fields is nil")
+    assert_error_msg_contains(err, "Index fields is nil")
 end
 
 

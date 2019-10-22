@@ -34,6 +34,7 @@ local function _get_index_parts(space, index_part)
 end
 
 local function _get_index_function(index_func)
+    error('Not implemented yet')
     local ddl_func_info = {}
     local box_func_info = box.func[index_func.name]
 
@@ -61,7 +62,7 @@ local function _get_index(box_space, box_index)
         ddl_index.distance = box.space._index:get({box_space.id, box_index.id}).opts.distance or 'euclid'
     end
 
-    -- TODO implement after
+    -- TODO implement later
     -- if box_index.sequence_id ~= nil then
     --     ddl_index.sequence = box.sequence[box_index.sequence_id]
     --     ddl_index.sequence.uid = nil
@@ -75,15 +76,18 @@ local function _get_index(box_space, box_index)
     return ddl_index
 end
 
-local function _get_space(box_space)
-    local ddl_space = {}
-    ddl_space.is_local = box_space.is_local
-    ddl_space.temporary = box_space.temporary
-    ddl_space.engine = box_space.engine
-    ddl_space.format = box_space:format()
-    for _, v in ipairs(ddl_space.format) do
-        if v.is_nullable == nil then
-            v.is_nullable = false
+local function get_space_schema(space_name)
+    local box_space = box.space[space_name]
+    assert(box_space ~= nil)
+
+    local space_ddl = {}
+    space_ddl.is_local = box_space.is_local
+    space_ddl.temporary = box_space.temporary
+    space_ddl.engine = box_space.engine
+    space_ddl.format = box_space:format()
+    for _, field in ipairs(space_ddl.format) do
+        if field.is_nullable == nil then
+            field.is_nullable = false
         end
     end
 
@@ -93,20 +97,21 @@ local function _get_space(box_space)
             table.insert(indexes, _get_index(box_space, index))
         end
     end
-    ddl_space.indexes = indexes
-    return ddl_space
+    space_ddl.indexes = indexes
+    return space_ddl
 end
 
-local function get_schema()
-    local schema = {}
+-- local function get_schema()
+--     local schema = {}
 
-    for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX }, {iterator = "GE"}) do
-        schema[space.name] = _get_space(box.space[space.name])
-    end
+--     for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX }, {iterator = "GE"}) do
+--         schema[space.name] = get_space_ddl(box.space[space.name])
+--     end
 
-    return schema
-end
+--     return schema
+-- end
 
 return {
-    get_schema = get_schema,
+    -- get_schema = get_schema,
+    get_space_schema = get_space_schema,
 }
