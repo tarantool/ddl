@@ -46,8 +46,8 @@ local test_schema = {
 
 
 function g.test_invalid_format()
-    local schema = table.deepcopy(test_schema)
-    schema.test.indexes = {
+    local schema = {spaces = table.deepcopy(test_schema)}
+    schema.spaces.test.indexes = {
         {
             type = 'HASH',
             name = 't',

@@ -9,7 +9,7 @@ local g = t.group('set_schema')
 g.before_all = db.init
 g.setup = db.drop_all
 
-local test_schema = {
+local test_space = {
     ['test'] = {
         engine = 'memtx',
         is_local = true,
@@ -37,13 +37,15 @@ local test_schema = {
             {name = 'any_nullable', type = 'any', is_nullable = true},
         },
     }
+
 }
 
 local function _test_index(indexes_ddl, error_expected)
     db.drop_all()
 
-    local schema = table.deepcopy(test_schema)
-    schema.test.indexes = indexes_ddl
+    local spaces = table.deepcopy(test_space)
+    spaces.test.indexes = indexes_ddl
+    local schema = {spaces = spaces}
 
     local ok, err = ddl.set_schema(schema)
     if not error_expected then
@@ -53,7 +55,7 @@ local function _test_index(indexes_ddl, error_expected)
 
         local ddl_schema = ddl.get_schema()
         local ok, err = pcall(t.assert_equals,
-            ddl_schema.test.indexes, schema.test.indexes,
+            ddl_schema.spaces.test.indexes, schema.spaces.test.indexes,
             nil, -- message
             true -- deep_analysis
         )
@@ -86,6 +88,34 @@ local function assert_error_msg_contains(err_msg, expected, level)
             err_msg, expected
         ), 2)
     end
+end
+
+function g.test_erroneous_schema()
+    local res, err = ddl.set_schema(nil)
+    t.assert_not(res)
+    t.assert_str_icontains(err, 'Bad argument #1 to ddl.set_schema (table expected, got nil)')
+
+    local res, err = ddl.set_schema({})
+    t.assert_not(res)
+    t.assert_str_icontains(err, 'Bad argument #1 to ddl.set_schema schema.spaces (table expected, got nil)')
+
+    local res, err = ddl.set_schema({spaces = 5})
+    t.assert_not(res)
+    t.assert_str_icontains(err, 'Bad argument #1 to ddl.set_schema schema.spaces (table expected, got number)')
+
+    local res, err = ddl.set_schema({spaces = {test_space.test}})
+    t.assert_not(res)
+    t.assert_str_icontains(err,
+        'Bad argument #1 to ddl.set_schema shema.spaces' ..
+        ' (expected key value table, where key (space name) with type string, actual number)'
+    )
+
+    local res, err = ddl.set_schema({spaces = {space = 5}})
+    t.assert_not(res)
+    t.assert_str_icontains(err,
+        'Bad argument #1 to ddl.set_schema shema.spaces expected' ..
+        ' (key value table, where value (space info) type table, actual number)'
+    )
 end
 
 function g.test_hash_index()
@@ -646,11 +676,11 @@ function g.test_multikey_path()
 end
 
 function g.test_erroneous_type_in_format()
-    local schema = table.deepcopy(test_schema)
-    schema.test.format[1].type = 'undefined'
+    local schema = {spaces = table.deepcopy(test_space)}
+    schema.spaces.test.format[1].type = 'undefined'
 
     local res, err = ddl.set_schema(schema)
-    t.assert_nil(res)
+    t.assert_not(res)
     assert_error_msg_contains(err, "Failed to create space 'test': field 1 has unknown field type")
 end
 
@@ -722,8 +752,8 @@ function g.test_primary_key_error()
 end
 
 function g.test_missing_ddl_index_parts()
-    local schema = table.deepcopy(test_schema)
-    schema.test.indexes = {
+    local schema = {spaces = table.deepcopy(test_space)}
+    schema.spaces.test.indexes = {
         {
             type = 'TREE',
             name = 'primary',
@@ -732,14 +762,14 @@ function g.test_missing_ddl_index_parts()
     }
 
     local res, err =  ddl.set_schema(schema)
-    t.assert_nil(res)
+    t.assert_not(res)
     assert_error_msg_contains(err, "index parts is nil")
 end
 
 function g.test_missing_format()
-    local schema = table.deepcopy(test_schema)
-    schema.test.format = nil
-    schema.test.indexes = {{
+    local schema = {spaces = table.deepcopy(test_space)}
+    schema.spaces.test.format = nil
+    schema.spaces.test.indexes = {{
         type = 'TREE',
         unique = true,
         name = 'primary',
@@ -748,27 +778,27 @@ function g.test_missing_format()
 
 
     local res, err =  ddl.set_schema(schema)
-    t.assert_nil(res)
+    t.assert_not(res)
     assert_error_msg_contains(err, "Illegal parameters, options.parts[1]: " ..
         "field was not found by name 'unsigned_nonnull'"
     )
 end
 
 function g.test_missing_indexes()
-    local schema = table.deepcopy(test_schema)
-    schema.test.indexes = nil
+    local schema = {spaces = table.deepcopy(test_space)}
+    schema.spaces.test.indexes = nil
 
 
     local res, err =  ddl.set_schema(schema)
-    t.assert_nil(res)
+    t.assert_not(res)
     assert_error_msg_contains(err, "Index fields is nil")
 end
 
 
 function g.test_two_spaces()
     local spaces = {
-        ['space1'] = table.deepcopy(test_schema['test']),
-        ['space2'] = table.deepcopy(test_schema['test']),
+        ['space1'] = table.deepcopy(test_space['test']),
+        ['space2'] = table.deepcopy(test_space['test']),
     }
 
     local primary = {
@@ -800,20 +830,21 @@ function g.test_two_spaces()
         }
     }
 
-    local res, err = ddl.set_schema(spaces)
-    t.assert_true(res)
-    t.assert_nil(err)
+    local schema = {spaces = spaces}
+    local res, err = ddl.set_schema(schema)
+    t.assert(res)
+    t.assert_not(err)
 
     local ddl_schema = ddl.get_schema()
-    t.assert_equals(ddl_schema, spaces)
+    t.assert_equals(ddl_schema, schema)
 end
 
 
 function g.test_error_spaces()
     local spaces = {
-        ['space1'] = table.deepcopy(test_schema['test']),
-        ['space2'] = table.deepcopy(test_schema['test']),
-        ['space3'] = table.deepcopy(test_schema['test']),
+        ['space1'] = table.deepcopy(test_space['test']),
+        ['space2'] = table.deepcopy(test_space['test']),
+        ['space3'] = table.deepcopy(test_space['test']),
     }
 
     local ok_primary = {
@@ -838,9 +869,9 @@ function g.test_error_spaces()
         parts = {{is_nullable = false, path = 'unsigned_nullable', type = 'unsigned'}}
     }}
 
-    local res, err = ddl.set_schema(spaces)
+    local res, err = ddl.set_schema({spaces = spaces})
 
-    t.assert_nil(res)
+    t.assert_equals(res, nil)
     assert_error_msg_contains(err,
         "Can't create or modify index 'primary' in space 'space3': primary key must be unique"
     )
@@ -852,7 +883,7 @@ function g.test_error_spaces()
 end
 
 function g.test_set_schema_sequently_err()
-    local old_schema = table.deepcopy(test_schema)
+    local old_schema =  {spaces = table.deepcopy(test_space)}
     local ok_primary = {
         name = 'primary',
         type = 'TREE',
@@ -860,28 +891,30 @@ function g.test_set_schema_sequently_err()
         parts = {{is_nullable = false, path = 'unsigned_nullable', type = 'unsigned'}},
     }
 
-    old_schema.test.indexes = {
+    old_schema.spaces.test.indexes = {
         ok_primary
     }
 
     local res, err = ddl.set_schema(old_schema)
-    t.assert_true(res)
-    t.assert_nil(err)
+    t.assert(res)
+    t.assert_not(err)
 
     local res = ddl.get_schema()
     t.assert_equals(res, old_schema)
 
     local new_schema = {
-        ['space1'] = table.deepcopy(test_schema['test']),
-        ['space2'] = table.deepcopy(test_schema['test']),
+        spaces = {
+            ['space1'] = table.deepcopy(test_space['test']),
+            ['space2'] = table.deepcopy(test_space['test']),
+        }
     }
 
 
-    new_schema.space1.indexes = {
+    new_schema.spaces.space1.indexes = {
         ok_primary
     }
 
-    new_schema.space2.indexes = {{
+    new_schema.spaces.space2.indexes = {{
         name = 'primary',
         type = 'TREE',
         unique = true,
@@ -889,7 +922,7 @@ function g.test_set_schema_sequently_err()
     }}
 
     local res, err = ddl.set_schema(new_schema)
-    t.assert_nil(res)
+    t.assert_not(res)
     assert_error_msg_contains(err, "Field 2 has type 'unsigned' in space format, but type 'string' in index definition")
 
     local res = ddl.get_schema()
@@ -898,7 +931,7 @@ end
 
 
 function g.test_set_schema_sequently_ok()
-    local old_schema = table.deepcopy(test_schema)
+    local old_schema = {spaces = table.deepcopy(test_space)}
     local ok_primary = {
         name = 'primary',
         type = 'TREE',
@@ -906,36 +939,38 @@ function g.test_set_schema_sequently_ok()
         parts = {{is_nullable = false, path = 'unsigned_nullable', type = 'unsigned'}},
     }
 
-    old_schema.test.indexes = {
+    old_schema.spaces.test.indexes = {
         ok_primary
     }
 
     local res, err = ddl.set_schema(old_schema)
-    t.assert_true(res)
-    t.assert_nil(err)
+    t.assert(res)
+    t.assert_not(err)
 
     local res = ddl.get_schema()
     t.assert_equals(res, old_schema)
 
     local new_schema = {
-        ['space1'] = table.deepcopy(test_schema['test']),
-        ['space2'] = table.deepcopy(test_schema['test']),
+        spaces = {
+            ['space1'] = table.deepcopy(test_space['test']),
+            ['space2'] = table.deepcopy(test_space['test']),
+        }
     }
 
 
-    new_schema.space1.indexes = {
+    new_schema.spaces.space1.indexes = {
         ok_primary
     }
 
-    new_schema.space2.indexes = {
+    new_schema.spaces.space2.indexes = {
         ok_primary
     }
 
     local res, err = ddl.set_schema(new_schema)
-    t.assert_true(res)
-    t.assert_nil(err)
+    t.assert(res)
+    t.assert_not(err)
 
     local res = ddl.get_schema()
-    new_schema.test = old_schema.test
+    new_schema.spaces.test = old_schema.spaces.test
     t.assert_equals(res, new_schema)
 end

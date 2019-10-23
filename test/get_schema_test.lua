@@ -36,7 +36,7 @@ function g.test_valid_ddl_format()
     })
 
     local res = ddl.get_schema()
-    t.assert_equals(res, {
+    t.assert_equals(res.spaces, {
         ['test_schema'] = {
             engine = 'memtx',
             is_local = false,
@@ -87,7 +87,7 @@ function g.test_blank()
     g.space = box.schema.space.create('blank')
 
     local res = ddl.get_schema()
-    t.assert_equals(res['blank'], {
+    t.assert_equals(res.spaces['blank'], {
         engine = 'memtx',
         is_local = false,
         temporary = false,
@@ -107,7 +107,7 @@ function g.test_no_index()
     })
 
     local res = ddl.get_schema()
-    t.assert_equals(res, {
+    t.assert_equals(res.spaces, {
         ['no_index'] = {
             engine = 'memtx',
             is_local = false,
@@ -133,7 +133,7 @@ function g.test_no_format()
     })
 
     local res = ddl.get_schema()
-    t.assert_equals(res['no_format'], {
+    t.assert_equals(res.spaces['no_format'], {
         engine = 'memtx',
         is_local = false,
         temporary = false,
@@ -200,7 +200,7 @@ function g.test_hash_index()
 
     local res = ddl.get_schema()
 
-    t.assert_equals(res, {
+    t.assert_equals(res.spaces, {
         ['hash_indexes'] = {
             engine = 'memtx',
             is_local = false,
@@ -278,7 +278,7 @@ function g.test_with_tree_index()
     })
     local res = ddl.get_schema()
 
-    t.assert_equals(res, {
+    t.assert_equals(res.spaces, {
         ['tree_indexes'] = {
             engine = 'memtx',
             is_local = false,
@@ -355,7 +355,7 @@ function g.test_with_bitset_index()
     })
 
     local res = ddl.get_schema()
-    t.assert_equals(res, {
+    t.assert_equals(res.spaces, {
         ['bitset_indexes'] = {
             engine = 'memtx',
             is_local = false,
@@ -420,7 +420,7 @@ function g.test_rtree_index()
 
     local res = ddl.get_schema()
 
-    t.assert_equals(res, {
+    t.assert_equals(res.spaces, {
         ['rtree_indexes'] = {
             engine = 'memtx',
             is_local = false,
@@ -501,7 +501,7 @@ function g.test_with_function_index()
     })
 
     local res = ddl.get_schema()
-    t.assert_equals(res, {
+    t.assert_equals(res.spaces, {
         ['functional_index'] = {
             engine = 'memtx',
             is_local = false,
@@ -574,7 +574,7 @@ function g.test_sequence_index()
     local seq_info = seq_opts
     seq_info.name = 'seq'
 
-    t.assert_equals(res,  {
+    t.assert_equals(res.spaces,  {
         ['with_sequence'] = {
             engine = 'memtx',
             is_local = false,
@@ -621,7 +621,7 @@ function g.test_path()
     })
 
     local res = ddl.get_schema()
-    t.assert_equals(res, {
+    t.assert_equals(res.spaces, {
         ['path_indexes'] = {
             engine = 'memtx',
             is_local = false,
@@ -678,7 +678,7 @@ function g.test_two_spaces()
 
     local res = ddl.get_schema()
 
-    t.assert_equals(res, {
+    t.assert_equals(res.spaces, {
         ['first'] = {
             engine = 'memtx',
             is_local = false,
@@ -753,7 +753,7 @@ function g.test_get_schema_with_default_values()
     })
 
     local res = ddl.get_schema()
-    t.assert_equals(res, {
+    t.assert_equals(res.spaces, {
         ['test_schema'] = {
             engine = 'memtx',
             is_local = false,

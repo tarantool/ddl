@@ -5,11 +5,44 @@ local ddl_set = require('ddl.set')
 local ddl_check = require('ddl.check')
 local utils = require('ddl.utils')
 
-local function check_schema(schema)
+local function check_schema_format(schema)
+    local caller_name = debug.getinfo(3, "n").name
+    local err_msg = 'Bad argument #1 to ddl.' .. caller_name
+
     if type(schema) ~= 'table' then
-        error('Bad argument #1 to ddl.set_schema' ..
+        error(err_msg ..
             ' (table expected, got ' .. type(schema) .. ')',
-        2)
+        3)
+    end
+
+    if type(schema.spaces) ~= 'table' then
+        error(err_msg ..
+        ' schema.spaces (table expected, got ' .. type(schema.spaces) .. ')',
+        3)
+    end
+
+
+    for k, v in pairs(schema.spaces) do
+        if type(k) ~= 'string' then
+            error(err_msg ..
+                ' shema.spaces (expected key value table, where key (space name) with type string, actual ' ..
+                type(k) .. ')',
+            2)
+        end
+
+        if type(v) ~= 'table' then
+            error(err_msg ..
+                ' shema.spaces expected (key value table, where value (space info) type table, actual ' ..
+                type(v) .. ')',
+            2)
+        end
+    end
+end
+
+local function check_schema(schema)
+    local ok, err = pcall(check_schema_format, schema)
+    if not ok then
+        return nil, err
     end
 
     if type(box.cfg) == 'function' then
@@ -20,12 +53,7 @@ local function check_schema(schema)
         return nil, "Box is read only"
     end
 
-    for space_name, space_schema in pairs(schema) do
-        -- local ok, err = ddl_check.check_space_schema(space_name, space_schema)
-        -- if not ok then
-        --     return nil, err
-        -- end
-
+    for space_name, space_schema in pairs(schema.spaces) do
         if box.space[space_name] ~= nil then
             local diff = {}
             local current_schema = ddl_get.get_space_schema(space_name)
@@ -34,7 +62,7 @@ local function check_schema(schema)
                 return nil, string.format(
                     "Incompatible schema: space[%q]" ..
                     " %s (expected %s, got %s)",
-                    diff.path, diff.expected, diff.got
+                    space_name, diff.path, diff.expected, diff.got
                 )
             end
         else
@@ -58,10 +86,9 @@ local function check_schema(schema)
 end
 
 local function set_schema(schema)
-    if type(schema) ~= 'table' then
-        error('Bad argument #1 to ddl.set_schema' ..
-            ' (table expected, got ' .. type(schema) .. ')',
-        2)
+    local ok, err = pcall(check_schema_format, schema)
+    if not ok then
+        return nil, err
     end
 
     local ok, err = check_schema(schema)
@@ -69,7 +96,7 @@ local function set_schema(schema)
         return nil, err
     end
 
-    for space_name, space_schema in pairs(schema) do
+    for space_name, space_schema in pairs(schema.spaces) do
         if box.space[space_name] == nil then
             ddl_set.create_space(space_name, space_schema)
         end
@@ -81,11 +108,12 @@ end
 
 local function get_schema()
     local schema = {}
-
+    local spaces = {}
     for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GT"}) do
-        schema[space.name] = ddl_get.get_space_schema(space.name)
+        spaces[space.name] = ddl_get.get_space_schema(space.name)
     end
 
+    schema.spaces = spaces
     return schema
 end
 
