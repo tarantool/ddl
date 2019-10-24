@@ -72,15 +72,10 @@ format = {
                     name = '...',
                     unique = false, -- rtree can't be unique
                     parts = {
-                        -- array with only one part params
+                        -- array with only one part param
                         {
                             path = string (field_name[.path] within field,
-                            type = 'unsigned | string'
-                            collation = nil|'none'|'unicode'|'unicode_ci'|...,
-                            -- collation must be set, if and only if
-                            -- type =
-                            -- to see full list of collations
-                            -- just run box.space._collation:select()
+                            type = 'array'
                             is_nullable = true|false,
                         }
                     },
@@ -91,10 +86,10 @@ format = {
                     name = '...',
                     unique = false, -- bitset index can't be unique
                     parts = {
-                        -- array with only one part params
+                        -- array with only one part param
                         {
                             path = string (field_name[.path] within field,
-                            type = 'array'
+                            type = 'unsigned | string'
                             is_nullable = true|false,
                         }
                     },
