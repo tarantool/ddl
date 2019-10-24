@@ -2,64 +2,6 @@
 
 local utils = require('ddl.utils')
 
--- local hash_tree_index_field_types = {
---     unsigned  = true,
---     integer   = true,
---     number    = true,
---     string    = true,
---     scalar    = true,
---     boolean   = true,
---     varbinary = true,
--- }
-
-
--- local index_info_map = {
---     ['TREE'] = {
---         known_keys = {'name', 'type', 'unique', 'parts'},
---         can_be_unique = true,
---         ['field_types'] = hash_tree_index_field_types,
---         ['is_multikey'] = true,
---         ['is_multipart'] = true,
---         ['engine'] = {
---             ['memtx'] = true,
---             ['vinyl'] = true,
---         }
---     },
---     ['HASH'] = {
---         known_keys = {'name', 'type', 'unique', 'parts'},
---         ['field_types'] = hash_tree_index_field_types,
---         ['is_multikey'] = false,
---         ['is_multipart'] = true,
---         ['engine'] = {
---             ['memtx'] = true
---         }
---     },
---     ['RTREE'] = {
---         known_keys = {'name', 'type', 'unique', 'field', 'dimension', 'distance'},
---         can_be_unique = false,
-
---         ['field_types'] = {
---             ['array'] = true
---         },
---         ['is_multikey'] = false,
---         ['is_multipart'] = false,
---         ['engine'] = {
---             ['memtx'] = true
---         }
---     },
---     ['BITSET'] = {
---         ['field_types'] = {
---             ['unsigned'] = true,
---             ['string'] = true,
---         },
---         ['is_multikey'] = false,
---         ['is_multipart'] = false,
---         ['engine'] = {
---             ['memtx'] = true
---         }
---     },
--- }
-
 local function check_field(i, field, space)
     if type(field) ~= 'table' then
         return nil, string.format(
@@ -120,18 +62,23 @@ local function check_field(i, field, space)
     end
 
 
-    -- check redundant keys
-    local k = utils.redundant_key(field,
-        {'name', 'type', 'is_nullable'}
-    )
-    if k ~= nil then
-        return nil, string.format(
-            "space[%q].fields[%q]: redundant argument %q",
-            space.name, field.name, k
+   do -- check redundant keys
+        local k = utils.redundant_key(field,
+            {'name', 'type', 'is_nullable'}
         )
+        if k ~= nil then
+            return nil, string.format(
+                "space[%q].fields[%q]: redundant argument %q",
+                space.name, field.name, k
+            )
+        end
     end
 
     return true
+end
+
+local function is_path_multikey(path)
+    return string.find(path, '[*]', 1, true) ~= nil
 end
 
 local function check_path(path, index, space)
@@ -143,31 +90,112 @@ local function check_path(path, index, space)
         )
     end
 
-    local field_name, _ = unpack(string.split(path, '.', 1))
-    -- local index_info = index_info_map[index.type]
-    if not space.fields[field_name] then
+    local field_name, json_path = unpack(string.split(path, '.', 1))
+    do -- check index.part.path references to existing field
+        if not space.fields[field_name] then
+            return nil, string.format(
+                ' bad path (%q) referencing unknown field',
+                path
+            )
+        end
+    end
+
+    do -- check that json_path can be used
+        if not db.json_path_allowed() and json_path ~= nil then
+            return nil, string.format(
+                " bad path (%q), it contains json_path, but your Tarantool ver (%q) dosent't support this",
+                path, db.version()
+            )
+        end
+    end
+
+    do -- check, that json_path references to map field
+        if json_path ~= nil and space.fields[field_name].type ~= 'map' then
+            return nil, string.format(
+                ' bad path (%q). This json_path references to field[%q] with type %s, but expected map',
+                path, field_name, space.fields[field_name].type
+            )
+        end
+    end
+
+    local allow_multikey = {
+        HASH = false,
+        TREE = true,
+        BITSET = false,
+        RTREE = false
+    }
+
+    do -- check multikey references
+        if is_path_multikey(path) and not allow_multikey[index.type] then
+            return nil, string.format(
+                " bad path (%q) for index %s, this index type doesn't allow multikeys",
+                path, index.type
+            )
+        end
+    end
+
+    return true
+end
+
+
+local function check_part_type(part_type, index_type)
+    if type(part_type) ~= 'string' then
         return nil, string.format(
-            ' bad path %q referencing unknown field',
-            path
+            'bad argument "type" (expected string, got %s)',
+            type(part_type)
+        )
+    end
+    -- also we have an aliases like str or num
+    local known_part_types = {
+        unsigned = true,
+        integer = true,
+        scalar = true,
+        string = true,
+        number = true,
+        array = true,
+        boolean = true,
+        varbinary = true,
+    }
+
+    if not known_part_types[part_type] then
+        return nil, string.format(
+            'unknown type %s',
+            part_type
         )
     end
 
+    local err_template = '%s field type is unsupported in %s index type'
 
-    -- if json_path then
-    --     if space.fields[field_name].type ~= 'map' then
-    --         return nil, string.format(
-    --             ' bad json path %q is json_path, but format field with name "%s" has type "%s", expected "map"',
-    --             path, field_name, space.fields[field_name].type
-    --         )
-    --     end
+    if index_type == 'TREE' or index_type == 'HASH' then
+        known_part_types.array = nil
+        if not known_part_types[part_type] then
+            return nil, string.format(err_template, part_type, index_type)
+        end
+    elseif index_type == 'BITSET' then
+        if part_type ~= 'unsigned' and part_type ~= 'string' then
+            return nil, string.format(err_template, part_type, index_type)
+        end
+    elseif index_type == 'RTREE' and part_type ~= 'array' then
+        return nil, string.format(err_template, part_type, index_type)
+    end
+    return true
+end
 
-    --     if string.find(json_path, '[*]', 1, true) and (not index_info.is_multikey) then
-    --         return nil, string.format(
-    --             'path "%s" has multikey path, but index type "%s" doesnt support multikeys',
-    --             path, index.type
-    --         )
-    --     end
-    -- end
+local function check_part_collation(collation)
+    if collation == nil then
+        return true
+    end
+
+    if type(collation) ~= 'string' then
+        return nil, string.format(
+            'bad argument "collation", (expected string (or no collation), got %s',
+            type(collation)
+        )
+    end
+
+    if box.space._collation.index.name:count{collation} == 0 then
+        return nil, string.format('unknown collation "%s"', collation)
+    end
     return true
 end
 
@@ -182,113 +210,102 @@ local function check_index_part(i, index, space)
         )
     end
 
-    local ok, err = check_path(part.path, index, space)
-    if not ok then
-        return nil, string.format(
-            'space[%q].indexes[%q].parts[%d]: %s',
-            space.name, index.name, i, index.type, err
-        )
+    do -- check path for valid
+        local ok, err = check_path(part.path, index, space)
+        if not ok then
+            return nil, string.format(
+                'space[%q].indexes[%q].parts[%d].path: %s',
+                space.name, index.name, i, index.type, err
+            )
+        end
     end
 
     local field_name, _ = unpack(string.split(part.path, '.', 1))
     local space_format_field = space.fields[field_name]
 
-    if space_format_field.type ~= 'map' and space_format_field.type ~= 'any' then
-        if space_format_field.type ~= part.type then
+    do -- check index.part.type equals format.field.type
+        if space_format_field.type ~= 'map' and space_format_field.type ~= 'any' then
+            if space_format_field.type ~= part.type then
+                return nil, string.format(
+                    'space[%q].indexes[%q].parts[%d].type: type differs from space.format.field[%q] (expected %s, got %s)',
+                    space.name, index.name, i, field_name, space_format_field.type, part.type
+                )
+            end
+        end
+    end
+
+    do -- check index can work with part.type
+        local ok, err = check_part_type(index.type, part.type)
+        if not ok then
             return nil, string.format(
-                'space[%q].indexes[%q].parts[%d].type (%s): type differs from space.format[%q] type "%s"',
-                space.name, index.name, i, index.type, field_name, space_format_field.type
+                'space[%q].indexes[%q].parts[%d].type: %s',
+                err
             )
         end
     end
 
-    -- local index_info = index_info_map[index.type]
-    -- if not index_info.field_types[part.type] then
-    --     return nil, string.format(
-    --         "part with idx '%d' has type '%s', but '%s' indexes doesnt support this",
-    --         i, part.type or 'nil', index.type
-    --     )
-    -- end
+    do -- check collation exist, collation can be ommited
+        if part.type == 'string' then
+            local ok, err = check_part_collation(part.collation)
+            if not ok then
+                return nil, string.format(
+                    "space[%q].indexes[%q].parts[%d].collation: %s",
+                    space.name, index.name, i, err
+                )
+            end
+        end
+    end
 
-    if part.type == 'string' then
-        local collation_info = box.space._collation.index.name:select{part.collation or 'nil'}
-        if #collation_info == 0 then
+    do -- check the same nullability
+        if space_format_field.is_nullable ~= part.is_nullable then
             return nil, string.format(
-                "part with idx '%d' has type 'string' and collation must be set, but there is unknown collation '%s'",
-                i, part.collation
+                "space[%q].indexes[%q].parts[%d].is_nullable: has different nullability with" ..
+                "space.foramat.field[%q] (expected %s, got %s )",
+                space.name, index.name, i, field_name, space_format_field.is_nullable, space_format_field.is_nullable
             )
         end
     end
 
-    if space_format_field.is_nullable ~= part.is_nullable then
-        return nil, string.format(
-            "part with idx '%d' is_nullable='%s', but format field '%s' has is_nullable='%s'",
-            i, part.is_nullable, field_name, space_format_field.is_nullable
+    do -- check redundant keys
+        local k = utils.redundant_key(space,
+            {'path', 'type', 'collation', 'is_nullable'}
         )
-    end
-
-    -- check redundant keys
-    local k = utils.redundant_key(space,
-        {'path', 'type', 'collation', 'is_nullable'}
-    )
-    if k ~= nil then
-        return nil, string.format(
-            "space[%q].indexes[%q].parts[%d]: redundant argument %q",
-            space.name, index.name, i, k
-        )
+        if k ~= nil then
+            return nil, string.format(
+                "space[%q].indexes[%q].parts[%d]: redundant argument %q",
+                space.name, index.name, i, k
+            )
+        end
     end
 
     return true
 end
 
-
--- local function validate_primary_index(index)
---     if not index.unique then
---         return nil, string.format(
---             "inedx '%s' is pramary and it must be unique, primary indexes can be 'TREE' or 'HASH'",
---             index.name
---         )
---     end
-
---     for i, part in ipairs(index.parts) do
---         if string.find(part.path, '[*]', 1, true) then
---             return nil , string.format(
---                 "index.parts with idx '%d' of index '%s' contains multikey ('%s'), " ..
---                 "but primary indexes can't be multikey",
---                 i, index.name, part.path
---             )
---         end
---     end
---     return true
--- end
-
 local function check_index_parts(index, space)
     if not utils.is_array(index.parts) then
         return nil, string.format(
-            'space[%q].indexes[%q] (%s): bad argument "parts"' ..
+            'space[%q].indexes[%q]: bad argument "parts"' ..
             ' (contiguous array of tables expected, got %s)',
             space.name, index.name, index.type, type(index.parts)
         )
     end
 
-    for i, _ in ipairs(index.parts) do
-        local res, err = check_index_part(i, index, space)
-        if not res then
-            return nil, string.format("in index '%s' %s", index.name, err)
+    do -- check bitset/rtree indexes is not multipart
+        if (index.type == 'RTREE' or index.type == 'BITSET') and #index.parts > 1 then
+            return nil, string.format(
+                "space[%q].indexes[%q].parts: " ..
+                "%s index type, doesn't support multipart keys, actually it contains %d parts",
+                space.name, index.name, index.type, #index.parts)
         end
     end
 
-    return true
-end
-
-local function check_index_field(index, space)
-    local ok, err = check_path(index.field, index, space)
-    if not ok then
-        return nil, string.format(
-            'space[%q].indexes[%q].parts[%d]: %s',
-            space.name, index.name, i, err
-        )
+    for i, _ in ipairs(index.parts) do
+        local res, err = check_index_part(i, index, space)
+        if not res then
+            return nil, err
+        end
     end
+
     return true
 end
 
@@ -370,10 +387,10 @@ local function check_index(i, index, space)
             )
         end
 
-        -- local ok, err = check_index_parts(index, space)
-        -- if not ok then
-        --     return nil, err
-        -- end
+        local ok, err = check_index_parts(index, space)
+        if not ok then
+            return nil, 'space[%q].indexes[%q]' .. err
+        end
 
     elseif index.type == 'HASH' then
         if index.unique ~= true then
@@ -383,10 +400,10 @@ local function check_index(i, index, space)
             )
         end
 
-        -- local ok, err = check_index_parts(index, space)
-        -- if not ok then
-        --     return nil, err
-        -- end
+        local ok, err = check_index_parts(index, space)
+        if not ok then
+            return nil, err
+        end
 
     elseif index.type == 'RTREE' then
         if i == 1 then
@@ -403,10 +420,10 @@ local function check_index(i, index, space)
             )
         end
 
-        -- local ok, err = check_index_field(index, space)
-        -- if not ok then
-        --     return nil, err
-        -- end
+        local ok, err = check_index_parts(index, space)
+        if not ok then
+            return nil, err
+        end
 
     elseif index.type == 'BITSET' then
         if i == 1 then
@@ -423,10 +440,10 @@ local function check_index(i, index, space)
             )
         end
 
-        -- local ok, err = check_index_field(index, space)
-        -- if not ok then
-        --     return nil, err
-        -- end
+        local ok, err = check_index_parts(index, space)
+        if not ok then
+            return nil, err
+        end
     end
 
     local k = utils.redundant_key(index,
@@ -438,46 +455,6 @@ local function check_index(i, index, space)
             space.name, index.name, k
         )
     end
-
-    -- local index_info = index_info_map[index.type]
-    -- if (not index_info) or (not index_info.engine[space_info.engine]) then
-    --     return nil, string.format("space.index '%s' has incorect type '%s'", index.name, index.type or 'nil')
-    -- end
-
-    -- if type(index.unique) ~= 'boolean' then
-    --     return nil, string.format(
-    --         "space.index '%s' has incorect unique field, it must be set and its boolean type"
-    --     )
-    -- end
-
-    -- if not validate_index_uniqueness(index.type, index.unique) then
-    --     return nil, string.format(
-    --         "space.index '%s' with type = '%s' doesn't alows 'unique=%s'",
-    --         index.name, index.type, index.unique
-    --     )
-    -- end
-
-    -- if not utils.is_array(index.parts) then
-    --     return nil, string.format("space.index '%s' has incorect parts, it must be an array", index.name)
-    -- end
-
-    -- if not index_info.is_multipart and #index.parts > 1 then
-    --     return nil, string.format(
-    --         "space.index '%s' with type '%s' can't be multipart (parts must contain only one value)",
-    --         index.name, index.type
-    --     )
-    -- end
-
-    -- for i, _ in ipairs(index.parts) do
-    --     local res, err = check_index_part(index, i, space_info)
-    --     if not res then
-    --         return nil, string.format("in index '%s' %s", index.name, err)
-    --     end
-    -- end
-
-    -- if idx == 1 then
-        -- return validate_primary_index(index)
-    -- end
 
     return true
 end
@@ -594,34 +571,6 @@ local function check_space(space_name, space)
     return true
 end
 
-
-local function clear_apply(space_names)
-    for _, space_name in ipairs(space_names) do
-        if box.space[space_name] then
-            box.space[space_name]:drop()
-        end
-    end
-end
-
-
-local function validate_with_apply(schema)
-    local ddl_set_schema = require('ddl.set_schema')
-    local applied_spaces = {}
-
-    for space_name, space in pairs(schema) do
-        local res, err = xpcall(ddl_set_schema.set_schema, debug.traceback, space_name, space)
-        table.insert(applied_spaces, space_name) -- it's hack, because space can be created, but indexes not
-        if not res then
-            clear_apply(applied_spaces)
-            return nil, err
-        end
-    end
-
-    clear_apply(applied_spaces)
-    return true
-end
-
-
 local function check_schema(schema)
     if type(schema) ~= 'table' then
         return nil, string.format(
@@ -653,9 +602,13 @@ local function check_schema(schema)
         -- end
     end
 
-    return validate_with_apply(schema)
+    -- return validate_with_apply(schema)
+
 end
 
 return {
     check_schema = check_schema,
+    check_space = check_space,
+    check_part_collation = check_part_collation,
+    check_part_type = check_part_type,
 }

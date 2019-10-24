@@ -2,9 +2,10 @@
 
 local t = require('luatest')
 local db = require('test.db')
-local ddl = require('ddl')
+local ddl = require('ddl.check')
+local log = require('log')
 
-local g = t.group('check_schema')
+local g = t.group('check')
 g.before_all = db.init
 g.setup = db.drop_all
 
@@ -45,30 +46,30 @@ local test_schema = {
 -- end
 
 
-function g.test_invalid_format()
-    local schema = {spaces = table.deepcopy(test_schema)}
-    schema.spaces.test.indexes = {
-        {
-            type = 'HASH',
-            name = 't',
-            unique = true,
-            parts = {{
-                path = 'unsigned_nonnull', type = 'unsigned', is_nullable = false,
-            }}
-        },
-        {
-            name = 'r',
-            type = 'RTREE',
-            field = 'map_nonnull.data[*].name',
-            unique = false,
-        }
-    }
+-- function g.test_invalid_format()
+--     local schema = {spaces = table.deepcopy(test_schema)}
+--     schema.spaces.test.indexes = {
+--         {
+--             type = 'HASH',
+--             name = 't',
+--             unique = true,
+--             parts = {{
+--                 path = 'unsigned_nonnull', type = 'unsigned', is_nullable = false,
+--             }}
+--         },
+--         {
+--             name = 'r',
+--             type = 'RTREE',
+--             field = 'map_nonnull.data[*].name',
+--             unique = false,
+--         }
+--     }
 
-    local log = require('log')
-    local res, err = ddl.check_schema(schema)
-    log.info(res)
-    log.info(err)
-end
+--     local log = require('log')
+--     local res, err = ddl.check_schema(schema)
+--     log.info(res)
+--     log.info(err)
+-- end
 
 function g.test_invalid_index_reference()
 
@@ -76,4 +77,62 @@ end
 
 function g.test_invalid_index()
 
+end
+
+
+function g.test_part_collation()
+    log.info(ddl)
+    local res, err = ddl.check_part_collation('binary')
+    t.assert(res)
+    t.assert_not(err)
+
+    local res, err = ddl.check_part_collation(nil)
+    t.assert(res)
+    t.assert_not(err)
+
+    local res, err = ddl.check_part_collation('undefined')
+    t.assert_not(res)
+    t.assert_str_icontains(err, 'unknown collation "undefined"')
+end
+
+function g.test_part_type()
+    local res, err = ddl.check_part_type('string', 'HASH')
+    t.assert(res)
+    t.assert_not(err)
+
+    local res, err = ddl.check_part_type('unsigned', 'TREE')
+    t.assert(res)
+    t.assert_not(err)
+
+    local res, err = ddl.check_part_type('string', 'BITSET')
+    t.assert(res)
+    t.assert_not(err)
+
+    local res, err = ddl.check_part_type('unsigned', 'BITSET')
+    t.assert(res)
+    t.assert_not(err)
+
+    local res, err = ddl.check_part_type('array', 'RTREE')
+    t.assert(res)
+    t.assert_not(err)
+
+    local res, err = ddl.check_part_type('undefined', 'TREE')
+    t.assert_not(res)
+    t.assert_str_icontains(err, 'unknown type undefined')
+
+    local res, err = ddl.check_part_type('unsigned', 'RTREE')
+    t.assert_not(res)
+    t.assert_str_icontains(err, 'unsigned field type is unsupported in RTREE index type')
+
+    local res, err = ddl.check_part_type('array', 'TREE')
+    t.assert_not(res)
+    t.assert_str_icontains(err,  'array field type is unsupported in TREE index type')
+
+    local res, err = ddl.check_part_type('array', 'HASH')
+    t.assert_not(res)
+    t.assert_str_icontains(err,  'array field type is unsupported in HASH index type')
+
+    local res, err = ddl.check_part_type('integer', 'BITSET')
+    t.assert_not(res)
+    t.assert_str_icontains(err,  'integer field type is unsupported in BITSET index type')
 end
