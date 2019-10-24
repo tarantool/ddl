@@ -71,14 +71,33 @@ format = {
                     type = 'RTREE',
                     name = '...',
                     unique = false, -- rtree can't be unique
-                    field = string (this field format must be 'array')
+                    parts = {
+                        -- array with only one part params
+                        {
+                            path = string (field_name[.path] within field,
+                            type = 'unsigned | string'
+                            collation = nil|'none'|'unicode'|'unicode_ci'|...,
+                            -- collation must be set, if and only if
+                            -- type =
+                            -- to see full list of collations
+                            -- just run box.space._collation:select()
+                            is_nullable = true|false,
+                        }
+                    },
                     dimension = number,
                     distance = 'euclid'|'manhattan',
                 }, {
                     type = BITSET,
                     name = '...',
                     unique = false, -- bitset index can't be unique
-                    field = string (this field format must be 'string' or 'unsigned')
+                    parts = {
+                        -- array with only one part params
+                        {
+                            path = string (field_name[.path] within field,
+                            type = 'array'
+                            is_nullable = true|false,
+                        }
+                    },
                 },
                 ...
             },
