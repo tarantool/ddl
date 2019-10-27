@@ -43,19 +43,34 @@ local function create_index(box_space, ddl_index)
 end
 
 local function create_space(space_name, space_schema)
-    local box_space = box.schema.space.create(space_name, {
+    local ok, data = pcall(box.schema.space.create, space_name, {
         engine = space_schema.engine,
         is_local = space_schema.is_local,
         temporary = space_schema.temporary,
         format = space_schema.format,
     })
 
-    if space_schema.indexes == nil then
-        error('Index fields is nil')
+    if not ok then
+        error(
+            string.format("space[%q]: %s", space_name, data)
+        )
     end
 
-    for _, index in ipairs(space_schema.indexes) do
-        create_index(box_space, index)
+    if space_schema.indexes == nil then
+        error(
+            string.format('space[%q]: Index fields is nil', space_name)
+        )
+    end
+
+    local box_space = data
+    for i, index in ipairs(space_schema.indexes) do
+        local ok, data = pcall(create_index, box_space, index)
+        if not ok then
+            error(string.format(
+                'space[%q].index[%q]: %s',  space_name, index.name or i,
+                data
+            ))
+        end
     end
     return true
 end

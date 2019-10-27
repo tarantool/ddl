@@ -22,21 +22,21 @@ local function check_schema_format(schema)
     end
 
 
-    for k, v in pairs(schema.spaces) do
-        if type(k) ~= 'string' then
-            error(err_msg ..
-                ' shema.spaces (expected key value table, where key (space name) with type string, actual ' ..
-                type(k) .. ')',
-            2)
-        end
+    -- for k, v in pairs(schema.spaces) do
+    --     if type(k) ~= 'string' then
+    --         error(err_msg ..
+    --             ' shema.spaces (expected key value table, where key (space name) with type string, actual ' ..
+    --             type(k) .. ')',
+    --         2)
+    --     end
 
-        if type(v) ~= 'table' then
-            error(err_msg ..
-                ' shema.spaces expected (key value table, where value (space info) type table, actual ' ..
-                type(v) .. ')',
-            2)
-        end
-    end
+    --     if type(v) ~= 'table' then
+    --         error(err_msg ..
+    --             ' shema.spaces expected (key value table, where value (space info) type table, actual ' ..
+    --             type(v) .. ')',
+    --         2)
+    --     end
+    -- end
 end
 
 local function check_schema(schema)
@@ -54,6 +54,10 @@ local function check_schema(schema)
     end
 
     for space_name, space_schema in pairs(schema.spaces) do
+        local ok, err = ddl_check.check_space(space_name, space_schema)
+        if not ok then
+            return nil, err
+        end
         if box.space[space_name] ~= nil then
             local diff = {}
             local current_schema = ddl_get.get_space_schema(space_name)

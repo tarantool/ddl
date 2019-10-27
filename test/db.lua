@@ -18,6 +18,10 @@ local function drop_all()
     end
 end
 
+local function version()
+    return require('tarantool').version
+end
+
 local function v(req_major, req_minor)
     req_minor = req_minor or 0
     assert(type(req_major) == 'number')
@@ -47,4 +51,5 @@ return {
 	init = init,
 	drop_all = drop_all,
     v = v,
+    version = version,
 }
