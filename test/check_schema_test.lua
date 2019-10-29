@@ -161,7 +161,7 @@ function g.test_index_part_type()
 end
 
 function g.test_varbinaty_index_part_type()
-    if db.v(2) then
+    if db.v(2, 2) then
         local ok, err = ddl_check.check_index_part_type('varbinary', 'TREE')
         t.assert(ok)
         t.assert_not(err)
@@ -220,9 +220,18 @@ function g.test_index_part_json_path()
     local ok, err = ddl_check.check_index_part_path(
         'map_nonnull.data[*].name', {type = 'TREE'}, test_space_info
     )
-    t.assert(ok)
-    t.assert_not(err)
 
+    if db.v(2, 2) then
+        t.assert(ok)
+        t.assert_not(err)
+    else
+        t.assert_not(ok)
+        t.assert_equals(err, string.format(
+            [[path ("map_nonnull.data[*].name") is multikey_path, but your Tarantool version]] ..
+            [[ (%q) doesn't support this]], db.version()
+        ))
+        t.success()
+    end
 
     local ok, err = ddl_check.check_index_part_path(
         'map_nonnull.data[*].name', {type = 'HASH'}, test_space_info
@@ -582,7 +591,7 @@ function g.test_check_index_hash()
     )
 
 
-    if db.v(2, 0) then
+    if db.v(2, 2) then
         local bad_index = table.deepcopy(hash_index)
         bad_index.parts[3] = {
             path = 'map_nonnull.data[*].name', type = 'string', is_nullable = false
@@ -877,7 +886,7 @@ function g.test_primary_index()
 
     local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
     t.assert_not(ok)
-    if db.v(2) then
+    if db.v(2, 2) then
         t.assert_equals(err,
             [[space["space"].indexes["primary"].part[3].path: primary indexes doesn't]] ..
             [[ allows multikey, actually path "map_nonnull.data[*].name" is multikey]]
@@ -1106,7 +1115,7 @@ function g.test_field()
     local ok, err = ddl_check.check_field(
         1, {name = 'x', type = 'varbinary', is_nullable = false}, space_info
     )
-    if db.v(2) then
+    if db.v(2, 2) then
         t.assert(ok)
         t.assert_not(err)
     else

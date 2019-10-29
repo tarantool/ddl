@@ -134,11 +134,20 @@ local function check_index_part_path(path, index, space)
     }
 
     do -- check multikey references
-        if is_path_multikey(path) and not allow_multikey[index.type] then
-            return nil, string.format(
-                "path (%q) is multikey, but index type %s doesn't allow multikeys",
-                path, index.type
-            )
+        if is_path_multikey(path) then
+            if not db.multikey_path_allowed() then
+                return nil, string.format(
+                    "path (%q) is multikey_path, but your Tarantool version (%q) doesn't support this",
+                    path, db.version()
+                )
+            end
+
+            if not allow_multikey[index.type] then
+                return nil, string.format(
+                    "path (%q) is multikey, but index type %s doesn't allow multikeys",
+                    path, index.type
+                )
+            end
         end
     end
 

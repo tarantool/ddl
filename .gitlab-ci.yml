@@ -1,0 +1,49 @@
+stages:
+  - test
+
+variables:
+  INSTALL_PACKAGES: git gcc make cmake unzip
+
+test_opensource-1.10:
+  stage: test
+  tags:
+    - docker
+  image: centos:7
+  before_script:
+    - curl -s https://packagecloud.io/install/repositories/tarantool/1_10/script.rpm.sh | bash
+    - yum -y install tarantool tarantool-devel
+    - tarantool -V
+    - yum -y install epel-release
+    - yum -y install $INSTALL_PACKAGES
+  script:
+    - make ci_prepare
+    - make lint test
+
+# test_opensource-2.1:
+#   stage: test
+#   tags:
+#     -docker
+#   image: centos:7
+#   before_script:
+#     - yum -y install $INSTALL_PACKAGES
+#     - yum -y install epel-release
+#     - make install_2_1
+#     - tarantool -V    
+#   script:
+#     - make ci_prepare
+#     - make lint test
+
+test_opensource-2.2:
+  stage: test
+  tags:
+    - docker
+  image: centos:7
+  before_script:
+    - curl -s https://packagecloud.io/install/repositories/tarantool/2_2/script.rpm.sh | bash
+    - yum -y install tarantool tarantool-devel
+    - tarantool -V
+    - yum -y install epel-release
+    - yum -y install $INSTALL_PACKAGES
+  script:
+    - make ci_prepare
+    - make lint test

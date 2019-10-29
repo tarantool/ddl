@@ -33,7 +33,7 @@ local function init_test_data()
         {name = 'varbinary_nullable', type = 'varbinary', is_nullable = true},
     }
 
-    if not db.v(2, 0) then
+    if not db.v(2, 2) then
         space_format[19] = nil
         space_format[20] = nil
     end
@@ -52,6 +52,8 @@ local test_space = init_test_data()
 
 local function _test_index(indexes_ddl, error_expected)
     db.drop_all()
+
+    log.info(require('tarantool').version)
 
     local spaces = table.deepcopy(test_space)
     spaces.test.indexes = indexes_ddl
@@ -92,7 +94,10 @@ local function _test_index(indexes_ddl, error_expected)
 end
 
 local function assert_error_msg_contains(err_msg, expected, level)
-    if not string.find(err_msg, expected, 1, true) then
+    if not level then
+        level = 1
+    end
+    if not string.find(err_msg, expected, level, true) then
         error(string.format(
             "Error message:\n %s\ndoesn't contains:\n %s\n",
             err_msg, expected
@@ -141,6 +146,7 @@ function g.test_hash_index()
         },
     }
 
+    log.info(require('tarantool').version)
     _test_index({pk, {
         type = 'HASH',
         unique = true,
