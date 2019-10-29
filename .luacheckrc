@@ -1,5 +1,6 @@
 redefined = false
 exclude_files = {
+    '.rocks/*'
 }
 new_read_globals = {
     'box',

@@ -33,18 +33,18 @@ local function _get_index_parts(space, index_part)
     return ddl_index_part
 end
 
-local function _get_index_function(index_func)
-    error('Not implemented yet')
-    local ddl_func_info = {}
-    local box_func_info = box.func[index_func.name]
+-- local function _get_index_function(index_func)
+--     error('Not implemented yet')
+--     local ddl_func_info = {}
+--     local box_func_info = box.func[index_func.name]
 
-    ddl_func_info.name = index_func.name
-    ddl_func_info.body = box_func_info.body
-    ddl_func_info.is_deterministic = box_func_info.is_deterministic
-    ddl_func_info.is_sandboxed = box_func_info.is_sandboxed
-    ddl_func_info.opts = {is_multikey = box_func_info.is_multikey}
-    return ddl_func_info
-end
+--     ddl_func_info.name = index_func.name
+--     ddl_func_info.body = box_func_info.body
+--     ddl_func_info.is_deterministic = box_func_info.is_deterministic
+--     ddl_func_info.is_sandboxed = box_func_info.is_sandboxed
+--     ddl_func_info.opts = {is_multikey = box_func_info.is_multikey}
+--     return ddl_func_info
+-- end
 
 local function _get_index(box_space, box_index)
     local ddl_index = {}

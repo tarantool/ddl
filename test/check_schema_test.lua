@@ -169,7 +169,7 @@ function g.test_varbinaty_index_part_type()
         local ok, err = ddl_check.check_index_part_type('varbinary', 'TREE')
         t.assert_not(ok)
         t.assert_equals(err, string.format(
-            "varbinary type isn't allowed in your Tarantool version (%q)",
+            "varbinary type isn't allowed in your Tarantool version (%s)",
             db.version()
         ))
     end
@@ -193,7 +193,7 @@ function g.test_index_part_path()
 
     local ok, err = ddl_check.check_index_part_path('no_reference', index_info, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, 'path ("no_reference") referencing to unknown field')
+    t.assert_equals(err, 'path (no_reference) referencing to unknown field')
 end
 
 function g.test_index_part_json_path()
@@ -203,8 +203,8 @@ function g.test_index_part_json_path()
         )
         t.assert_not(ok)
         t.assert_equals(err, string.format(
-            [[path ("map_nonnull.data.name") is json_path, ]] ..
-            [[but your Tarantool version (%q) doesn't support this]],
+            [[path (map_nonnull.data.name) is json_path, ]] ..
+            [[but your Tarantool version (%s) doesn't support this]],
             db.version()
         ))
 
@@ -227,8 +227,8 @@ function g.test_index_part_json_path()
     else
         t.assert_not(ok)
         t.assert_equals(err, string.format(
-            [[path ("map_nonnull.data[*].name") is multikey_path, but your Tarantool version]] ..
-            [[ (%q) doesn't support this]], db.version()
+            [[path (map_nonnull.data[*].name) is multikey_path, but your Tarantool version]] ..
+            [[ (%s) doesn't support this]], db.version()
         ))
         t.success()
     end
@@ -238,7 +238,7 @@ function g.test_index_part_json_path()
     )
     t.assert_not(ok)
     t.assert_equals(err,
-        [[path ("map_nonnull.data[*].name") is multikey, ]] ..
+        [[path (map_nonnull.data[*].name) is multikey, ]] ..
         [[but index type HASH doesn't allow multikeys]]
     )
 
@@ -247,7 +247,7 @@ function g.test_index_part_json_path()
     )
     t.assert_not(ok)
     t.assert_equals(err,
-        [[path ("map_nonnull.data[*].name") is multikey, ]] ..
+        [[path (map_nonnull.data[*].name) is multikey, ]] ..
         [[but index type BITSET doesn't allow multikeys]]
     )
 
@@ -256,7 +256,7 @@ function g.test_index_part_json_path()
     )
     t.assert_not(ok)
     t.assert_equals(err,
-        [[path ("map_nonnull.data[*].name") is multikey, ]] ..
+        [[path (map_nonnull.data[*].name) is multikey, ]] ..
         [[but index type RTREE doesn't allow multikeys]]
     )
 
@@ -265,7 +265,7 @@ function g.test_index_part_json_path()
     )
     t.assert_not(ok)
     t.assert_equals(err,
-        [[path ("map_nonnull.data[*].name") is multikey, ]] ..
+        [[path (map_nonnull.data[*].name) is multikey, ]] ..
         [[but index type HASH doesn't allow multikeys]]
     )
 end
@@ -417,7 +417,7 @@ function g.test_index_part()
     local ok, err = ddl_check.check_index_part(1, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"].parts[1].path: path ("no_reference")' ..
+        'space["space"].indexes["primary"].parts[1].path: path (no_reference)' ..
         ' referencing to unknown field'
     )
 
@@ -454,7 +454,7 @@ function g.test_index_part()
     t.assert_not(ok)
     t.assert_equals(err,
         [[space["space"].indexes["primary"].parts[1].collation: type "unsigned"]] ..
-        [[ doesn't allows collation (only string type)]]
+        [[ doesn't allow collation (only string type)]]
     )
 
     -- chceck index part types equality
@@ -506,7 +506,7 @@ function g.test_index_parts()
     t.assert_not(ok)
     t.assert_equals(err,
         'space["space"].indexes["primary"].parts[1].path: ' ..
-        'path ("no_reference") referencing to unknown field'
+        'path (no_reference) referencing to unknown field'
     )
 
 
@@ -600,7 +600,7 @@ function g.test_check_index_hash()
         local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
         t.assert_not(ok)
         t.assert_equals(err,
-            [[space["space"].indexes["hash"].parts[3].path: path ("map_nonnull.data[*].name") ]] ..
+            [[space["space"].indexes["hash"].parts[3].path: path (map_nonnull.data[*].name) ]] ..
             [[is multikey, but index type HASH doesn't allow multikeys]]
         )
     end
@@ -889,13 +889,13 @@ function g.test_primary_index()
     if db.v(2, 2) then
         t.assert_equals(err,
             [[space["space"].indexes["primary"].part[3].path: primary indexes doesn't]] ..
-            [[ allows multikey, actually path "map_nonnull.data[*].name" is multikey]]
+            [[ allows multikey, actually path (map_nonnull.data[*].name) is multikey]]
         )
     else
         t.assert_equals(err, string.format(
             [[space["space"].indexes["primary"].parts[3].path: path ]] ..
-            [[("map_nonnull.data[*].name") is json_path, but your Tarantool version]] ..
-            [[ (%q) doesn't support this]],
+            [[(map_nonnull.data[*].name) is json_path, but your Tarantool version]] ..
+            [[ (%s) doesn't support this]],
             db.version()
         ))
     end
@@ -1122,7 +1122,7 @@ function g.test_field()
         t.assert_not(ok)
         t.assert_equals(err, string.format(
             [[space["space"].fields["x"]: varbinary type ]] ..
-            [[isn't allowed in your Tarantool version (%q)]],
+            [[isn't allowed in your Tarantool version (%s)]],
             db.version()
         ))
     end

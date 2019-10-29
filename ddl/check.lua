@@ -63,7 +63,7 @@ local function check_field(i, field, space)
 
         if not db.varbinary_allowed() and field.type == 'varbinary' then
             return nil, string.format(
-                "space[%q].fields[%q]: varbinary type isn't allowed in your Tarantool version (%q)",
+                "space[%q].fields[%q]: varbinary type isn't allowed in your Tarantool version (%s)",
                 space.name, field.name, db.version()
             )
         end
@@ -102,7 +102,7 @@ local function check_index_part_path(path, index, space)
     do -- check index.part.path references to existing field
         if not space.fields[field_name] then
             return nil, string.format(
-                "path (%q) referencing to unknown field",
+                "path (%s) referencing to unknown field",
                 path
             )
         end
@@ -111,7 +111,7 @@ local function check_index_part_path(path, index, space)
     do -- check that json_path can be used
         if not db.json_path_allowed() and json_path ~= nil then
             return nil, string.format(
-                "path (%q) is json_path, but your Tarantool version (%q) doesn't support this",
+                "path (%s) is json_path, but your Tarantool version (%s) doesn't support this",
                 path, db.version()
             )
         end
@@ -120,7 +120,7 @@ local function check_index_part_path(path, index, space)
     do -- check, that json_path references to map field
         if json_path ~= nil and space.fields[field_name].type ~= 'map' then
             return nil, string.format(
-                "path (%q) is json_path. It references to field[%q] with type %s, but expected map",
+                "path (%s) is json_path. It references to field[%s] with type %s, but expected map",
                 path, field_name, space.fields[field_name].type
             )
         end
@@ -137,14 +137,14 @@ local function check_index_part_path(path, index, space)
         if is_path_multikey(path) then
             if not db.multikey_path_allowed() then
                 return nil, string.format(
-                    "path (%q) is multikey_path, but your Tarantool version (%q) doesn't support this",
+                    "path (%s) is multikey_path, but your Tarantool version (%s) doesn't support this",
                     path, db.version()
                 )
             end
 
             if not allow_multikey[index.type] then
                 return nil, string.format(
-                    "path (%q) is multikey, but index type %s doesn't allow multikeys",
+                    "path (%s) is multikey, but index type %s doesn't allow multikeys",
                     path, index.type
                 )
             end
@@ -183,7 +183,7 @@ local function check_index_part_type(part_type, index_type)
 
     if not db.varbinary_allowed() and part_type == 'varbinary' then
        return nil, string.format(
-           "varbinary type isn't allowed in your Tarantool version (%q)",
+           "varbinary type isn't allowed in your Tarantool version (%s)",
            db.version()
         )
     end
@@ -283,7 +283,7 @@ local function check_index_part(i, index, space)
             end
         elseif part.collation ~= nil then
             return nil, string.format(
-                "space[%q].indexes[%q].parts[%d].collation: type %q doesn't allows collation (only string type)",
+                "space[%q].indexes[%q].parts[%d].collation: type %q doesn't allow collation (only string type)",
                 space.name, index.name, i, part.type
             )
         end
@@ -558,7 +558,7 @@ local function check_index(i, index, space)
                 if is_path_multikey(part.path) then
                     return nil, string.format(
                         "space[%q].indexes[%q].part[%d].path: primary indexes" ..
-                        " doesn't allows multikey, actually path %q is multikey",
+                        " doesn't allows multikey, actually path (%s) is multikey",
                         space.name, index.name, i, part.path
                     )
                 end

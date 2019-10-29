@@ -85,10 +85,10 @@ local function _test_index(indexes_ddl, error_expected)
                 "Mismatching error message:\n" ..
                 "expected: %s\n" ..
                 "  actual: %s\n",
-                err, error_expected
+                error_expected, err
             )
             log.error('\n%s', e)
-            -- error(e, 2)
+            error(e, 2)
         end
     end
 end
@@ -191,8 +191,7 @@ function g.test_hash_index()
             },
         },
     }},
-        "Can't create or modify index 'secondary'" ..
-        " in space 'test': HASH index must be unique"
+        [[space["test"].indexes["secondary"]: HASH index must be unique]]
     )
 
     _test_index({pk, {
@@ -208,7 +207,8 @@ function g.test_hash_index()
             },
         },
     }},
-        "HASH does not support nullable parts"
+        [[space["test"].indexes["secondary"].part[1]: "HASH" index type]] ..
+        [[ doesn't support nullable field]]
     )
 end
 
@@ -325,8 +325,7 @@ function g.test_bitset_index()
             }
         }
     }},
-        "Can't create or modify index 'secondary'" ..
-        " in space 'test': BITSET can not be unique"
+        [[space["test"].indexes["secondary"]: BITSET index can't be unique]]
     )
 
     _test_index({{
@@ -341,8 +340,7 @@ function g.test_bitset_index()
             }
         }
     }},
-        "Can't create or modify index 'primary'" ..
-        " in space 'test': primary key must be unique"
+        [[space["test"].indexes["primary"]: BITSET index can't be primary]]
     )
 
     _test_index({pk, {
@@ -357,8 +355,8 @@ function g.test_bitset_index()
             }
         }
     }},
-        "Can't create or modify index 'secondary'" ..
-        " in space 'test': BITSET index field type must be NUM or STR"
+        [[space["test"].indexes["secondary"].parts[1].type: integer field ]] ..
+        [[type is unsupported in BITSET index type]]
     )
 
     _test_index({pk, {
@@ -367,13 +365,14 @@ function g.test_bitset_index()
         unique = false,
         parts = {
             {
-                path = 'string_nonnull',
+                path = 'string_nullable',
                 type = 'string',
                 is_nullable = true,
             }
         }
     }},
-        "BITSET does not support nullable parts"
+        [[space["test"].indexes["secondary"].part[1]: "BITSET" index ]] ..
+        [[type doesn't support nullable field]]
     )
 
     _test_index({pk, {
@@ -389,12 +388,12 @@ function g.test_bitset_index()
             {
                 path = 'string_nullable',
                 type = 'string',
-                is_nullable = false,
+                is_nullable = true,
             }
         }
     }},
-        "Can't create or modify index 'secondary'" ..
-        " in space 'test': BITSET index key can not be multipart"
+        [[space["test"].indexes["secondary"].parts: "BITSET" index type doesn't ]] ..
+        [[support multipart keys, actually it contains 2 parts]]
     )
 end
 
@@ -431,12 +430,13 @@ function g.test_rtree_index()
         distance = 'manhattan',
         dimension = 8,
         parts = {{
-            path = 'array_nonnull',
+            path = 'array_nullable',
             type = 'array',
             is_nullable = true,
         }}
     }},
-        "RTREE does not support nullable parts"
+        [[space["test"].indexes["secondary"].part[1]: "RTREE" ]] ..
+        [[index type doesn't support nullable field]]
     )
 
     _test_index({pk, {
@@ -451,7 +451,7 @@ function g.test_rtree_index()
             is_nullable = false,
         }}
     }},
-        "Wrong index options (field 4): distance must be either 'euclid' or 'manhattan'"
+        [[space["test"].indexes["secondary"].distance: distance "not_existing" is unknown]]
     )
 
     _test_index({pk, {
@@ -466,8 +466,8 @@ function g.test_rtree_index()
             is_nullable = false,
         }}
     }},
-        "Index 'secondary' (RTREE) of space 'test' (memtx) does not" ..
-         " support dimension (-9): must belong to range [1, 20]"
+        [[space["test"].indexes["secondary"].dimension: bad argument 'dimension']] ..
+        [[ it must belong to range [1, 20], got -9]]
     )
 
     _test_index({pk, {
@@ -482,8 +482,8 @@ function g.test_rtree_index()
             is_nullable = false,
         }}
     }},
-        "Can't create or modify index 'secondary'" ..
-        " in space 'test': RTREE index field type must be ARRAY"
+        [[space["test"].indexes["secondary"].parts[1].type: string field]] ..
+        [[ type is unsupported in RTREE index type]]
     )
 
     _test_index({pk, {
@@ -500,11 +500,11 @@ function g.test_rtree_index()
         {
             path = 'array_nullable',
             type = 'array',
-            is_nullable = false,
+            is_nullable = true,
         }}
     }},
-        "Can't create or modify index 'secondary'" ..
-        " in space 'test': RTREE index key can not be multipart"
+        [[space["test"].indexes["secondary"].parts: "RTREE" index type doesn't]] ..
+        [[ support multipart keys, actually it contains 2 parts]]
     )
 end
 
@@ -520,6 +520,32 @@ function g.test_path()
             is_nullable = false,
         }},
     }
+
+    if not db.v(2,0) then
+        _test_index({
+            pk,
+            {
+                type = 'TREE',
+                name = 'secondary',
+                unique = true,
+                parts = {
+                    {
+                        path = 'map_nonnull.DATA["name"]',
+                        type = 'string',
+                        is_nullable = false,
+                        collation = 'unicode',
+                    },
+                },
+            }},
+            string.format(
+                [[space["test"].indexes["secondary"].parts[1].path: path ]] ..
+                [[(map_nonnull.DATA["name"]) is json_path, but your Tarantool ]] ..
+                [[version (%s) doesn't support this]],
+                db.version()
+            )
+        )
+        t.success()
+    end
 
     _test_index({pk, {
         name = 'path_idx',
@@ -571,7 +597,8 @@ function g.test_path()
             unique = true,
             parts = {{path = 'unsigned_nonnull.DATA["name"]', type = 'unsigned', is_nullable = false}}
         }},
-        "Field 1 has type 'unsigned' in one index, but type 'map' in another"
+        [[space["test"].indexes["path_idx"].parts[1].path: path (unsigned_nonnull.DATA["name"])]] ..
+        [[ is json_path. It references to field[unsigned_nonnull] with type unsigned, but expected map]]
     )
 
     _test_index({pk, {
@@ -584,8 +611,8 @@ function g.test_path()
             is_nullable = false,
         }}
     }},
-        [[Illegal parameters, options.parts[1]: ]] ..
-        [[field was not found by name 'empty.DATA["name"]']]
+        [[space["test"].indexes["path_idx"].parts[1].path: path (empty.DATA["name"])]] ..
+        [[ referencing to unknown field]]
     )
 end
 
@@ -598,8 +625,30 @@ function g.test_multikey_path()
         parts = {{is_nullable = false, path = 'unsigned_nonnull', type = 'unsigned'}},
     }
 
-    -- if not db.v(2, 0) then
-    -- end
+    if not db.v(2, 2) then
+        _test_index({
+            pk,
+            {
+                type = 'TREE',
+                name = 'secondary',
+                unique = true,
+                parts = {
+                    {
+                        path = 'map_nonnull.data[*].path',
+                        type = 'string',
+                        is_nullable = false,
+                        collation = 'unicode',
+                    },
+                },
+            }},
+            string.format(
+                [[space["test"].indexes["secondary"].parts[1].path: path (map_nonnull.data[*].path) ]] ..
+                [[is json_path, but your Tarantool version (%s) doesn't support this]],
+                db.version()
+            )
+        )
+        t.success()
+    end
 
     _test_index({
         pk,
@@ -633,7 +682,8 @@ function g.test_multikey_path()
                 },
             },
         }},
-        "Illegal parameters, options.parts[1]: field was not found by name 'empty.data[*].path'"
+        [[space["test"].indexes["secondary"].parts[1].path: path (empty.data[*].path)]] ..
+        [[ referencing to unknown field]]
     )
 
     _test_index({
@@ -651,7 +701,8 @@ function g.test_multikey_path()
                 },
             },
         }},
-        "Can't create or modify index 'secondary' in space 'test': BITSET index cannot be multikey"
+        [[space["test"].indexes["secondary"].parts[1].path: path (map_nonnull.data[*].path) ]] ..
+        [[is multikey, but index type BITSET doesn't allow multikeys]]
     )
 
     _test_index({
@@ -662,14 +713,15 @@ function g.test_multikey_path()
             unique = true,
             parts = {
                 {
-                    path = 'map_nonnull[*].data',
+                    path = 'map_nonnull.data[*].path',
                     type = 'string',
                     is_nullable = false,
                     collation = 'unicode',
                 },
             },
         }},
-        "Can't create or modify index 'secondary' in space 'test': HASH index cannot be multikey"
+        [[space["test"].indexes["secondary"].parts[1].path: path (map_nonnull.data[*].path)]] ..
+        [[ is multikey, but index type HASH doesn't allow multikeys]]
     )
 
     _test_index({
@@ -682,13 +734,14 @@ function g.test_multikey_path()
             dimension = 3,
             parts = {
                 {
-                    path = 'map_nonnull[*].data',
+                    path = 'map_nonnull.data[*].path',
                     type = 'array',
                     is_nullable = false,
                 },
             },
         }},
-        "Can't create or modify index 'secondary' in space 'test': RTREE index cannot be multikey"
+        [[space["test"].indexes["secondary"].parts[1].path: path (map_nonnull.data[*].path)]] ..
+        [[ is multikey, but index type RTREE doesn't allow multikeys]]
     )
 end
 
@@ -711,7 +764,7 @@ function g.test_invalid_type_in_index_field()
             name = 'primary',
             parts = {{path = 'unsigned_nonnull', type = 'undefined', is_nullable = false}}
         }},
-        "Wrong index options (field 1): index part: unknown field type"
+        'space["test"].indexes["primary"].parts[1].type: unknown type "undefined"'
     )
 
     _test_index({
@@ -721,7 +774,7 @@ function g.test_invalid_type_in_index_field()
             name = 'primary',
             parts = {{path = 'map_nonnull', type = 'map', is_nullable = false}}
         }},
-        "Can't create or modify index 'primary' in space 'test': field type 'map' is not supported"
+        'space["test"].indexes["primary"].parts[1].type: unknown type "map"'
     )
 end
 
@@ -733,7 +786,7 @@ function g.test_invalid_index_type()
             name = 'primary',
             parts = {{path = 'unsigned_nonnull', type = 'unsigned', is_nullable = false}}
         }},
-        "Unsupported index type supplied for index 'primary' in space 'test'"
+        'space["test"].indexes["primary"]: unknown type "BTREE"'
     )
 end
 
@@ -745,7 +798,7 @@ function g.test_primary_key_error()
             name = 'primary',
             parts = {{path = 'unsigned_nonnull', type = 'unsigned', is_nullable = false}}
         }},
-        "Can't create or modify index 'primary' in space 'test': primary key must be unique"
+        'space["test"].indexes["primary"]: primary TREE index must be unique'
     )
 
     _test_index({
@@ -753,21 +806,25 @@ function g.test_primary_key_error()
             type = 'TREE',
             unique = true,
             name = 'primary',
-            parts = {{path = 'unsigned_nonnull', type = 'unsigned', is_nullable = true}}
+            parts = {{path = 'unsigned_nullable', type = 'unsigned', is_nullable = true}}
         }},
-        "Primary index of space 'test' can not contain nullable parts"
+        [[space["test"].indexes["primary"].part[1].path: primary ]] ..
+        [[indexes can't contains nullable parts]]
     )
 
 
-    _test_index({
-        {
-            type = 'TREE',
-            unique = true,
-            name = 'primary',
-            parts = {{path = 'map_nonnull.data[*]', type = 'unsigned', is_nullable = true}}
-        }},
-        "Can't create or modify index 'primary' in space 'test': primary key cannot be multikey"
-    )
+    if db.v(2, 2) then
+        _test_index({
+            {
+                type = 'TREE',
+                unique = true,
+                name = 'primary',
+                parts = {{path = 'map_nonnull.data[*]', type = 'unsigned', is_nullable = false}}
+            }},
+            [[space["test"].indexes["primary"].part[1].path: primary indexes doesn't allows multikey,]] ..
+            [[ actually path (map_nonnull.data[*]) is multikey]]
+        )
+    end
 end
 
 function g.test_missing_ddl_index_parts()
