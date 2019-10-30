@@ -1,52 +1,32 @@
 stages:
   - test
 
-variables:
-  INSTALL_PACKAGES: git gcc make cmake unzip
-
-test_opensource-1.10:
+.test-opensource: &test-opensource
   stage: test
   tags:
     - docker
   image: centos:7
   before_script:
-    - curl -s https://packagecloud.io/install/repositories/tarantool/1_10/script.rpm.sh | bash
-    - yum -y install tarantool tarantool-devel
+    - curl -s https://packagecloud.io/install/repositories/tarantool/$TARANTOOL_REPO/script.rpm.sh | bash
+    - yum -y install git gcc cmake tarantool tarantool-devel
     - tarantool -V
-    - yum -y install epel-release
-    - yum -y install $INSTALL_PACKAGES
+    - tarantoolctl rocks install luatest 0.3.0
+    - tarantoolctl rocks install luacheck 0.25.0
   script:
-    - make ci_prepare
-    - make lint test
+    - tarantoolctl rocks make
+    - make test -C build.luarocks ARGS="-V"
 
+test-opensource-1.10:
+  <<: *test-opensource
+  variables:
+    TARANTOOL_REPO: "1_10"
 
-test_opensource-2.x:
-  stage: test
-  tags:
-    - docker
-  image: centos:7
-  before_script:
-    - curl -s https://packagecloud.io/install/repositories/tarantool/2x/script.rpm.sh | bash
-    - yum -y install tarantool tarantool-devel
-    - tarantool -V
-    - yum -y install epel-release
-    - yum -y install $INSTALL_PACKAGES
-  script:
-    - make ci_prepare
-    - make lint test
+test-opensource-2.2:
+  <<: *test-opensource
+  variables:
+    TARANTOOL_REPO: "2_2"
 
-
-test_opensource-2.2:
-  stage: test
-  tags:
-    - docker
-  image: centos:7
-  before_script:
-    - curl -s https://packagecloud.io/install/repositories/tarantool/2_2/script.rpm.sh | bash
-    - yum -y install tarantool tarantool-devel
-    - tarantool -V
-    - yum -y install epel-release
-    - yum -y install $INSTALL_PACKAGES
-  script:
-    - make ci_prepare
-    - make lint test
+test-opensource-2.x:
+  <<: *test-opensource
+  variables:
+    TARANTOOL_REPO: "2x"

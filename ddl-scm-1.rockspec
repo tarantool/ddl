@@ -2,7 +2,7 @@ package = 'ddl'
 version = 'scm-1'
 source  = {
     branch = 'master',
-    url = 'git://github.com/tarantool/ddl.git'
+    url = 'git+https://github.com/tarantool/ddl.git'
 }
 
 dependencies = {
@@ -18,15 +18,17 @@ description = {
         ]];
 }
 
+external_dependencies = {
+    TARANTOOL = {
+        header = 'tarantool/module.h',
+    },
+}
+
 build = {
-    type = 'none',
-    install = {
-        lua = {
-            ['ddl'] = 'ddl.lua',
-            ['ddl.utils'] = 'ddl/utils.lua',
-            ['ddl.get'] = 'ddl/get.lua',
-            ['ddl.set'] = 'ddl/set.lua',
-            ['ddl.check'] = 'ddl/check.lua',
-        },
+    type = 'cmake',
+    variables = {
+        TARANTOOL_DIR = '$(TARANTOOL_DIR)',
+        TARANTOOL_INSTALL_LIBDIR = '$(LIBDIR)',
+        TARANTOOL_INSTALL_LUADIR = '$(LUADIR)',
     },
 }
