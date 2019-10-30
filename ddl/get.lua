@@ -13,7 +13,9 @@ local function _get_index_field_path(space, index_part)
 
     local path = index_part.path
     if string.sub(index_part.path, 1, 1) ~= '.' then
-        path = '.' .. path
+        if string.sub(index_part.path, 1, 3) ~= '[*]' then
+            path = '.' .. path
+        end
     end
 
     local str_format = '%s%s'

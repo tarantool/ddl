@@ -52,13 +52,13 @@ local function create_space(space_name, space_schema)
 
     if not ok then
         error(
-            string.format("space[%q]: %s", space_name, data)
+            string.format("space[%q]: %s", space_name, data), 0
         )
     end
 
     if space_schema.indexes == nil then
         error(
-            string.format('space[%q]: Index fields is nil', space_name)
+            string.format('space[%q]: Index fields is nil', space_name), 0
         )
     end
 
@@ -69,7 +69,7 @@ local function create_space(space_name, space_schema)
             error(string.format(
                 'space[%q].index[%q]: %s',  space_name, index.name or i,
                 data
-            ))
+            ), 0)
         end
     end
     return true

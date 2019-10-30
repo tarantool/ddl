@@ -89,6 +89,33 @@ local function is_path_multikey(path)
     return string.find(path, '[*]', 1, true) ~= nil
 end
 
+local function get_path_info(path)
+    local multikey_start, _ = string.find(path, '[*]', 1, true)
+    local json_start, _ = string.find(path, '.', 1, true)
+
+    local field_name = unpack(string.split(path, '.', 1))
+    local field_name = unpack(string.split(field_name, '[*]', 1))
+
+    if not json_start and not multikey_start then
+        return {field_name = field_name, type = 'regular'}
+    end
+
+    if not multikey_start  then
+        return {field_name = field_name, type = 'json'}
+    end
+
+    if not json_start then
+        return {field_name = field_name, type = 'multikey'}
+    end
+
+    if json_start < multikey_start then
+        return {field_name = field_name, type = 'json_multikey'}
+    end
+
+    return {field_name = field_name, type = 'multikey_json'}
+end
+
+
 local function check_index_part_path(path, index, space)
     if type(path) ~= 'string' then
         return nil, string.format(
@@ -98,9 +125,9 @@ local function check_index_part_path(path, index, space)
         )
     end
 
-    local field_name, json_path = unpack(string.split(path, '.', 1))
+    local path_info = get_path_info(path)
     do -- check index.part.path references to existing field
-        if not space.fields[field_name] then
+        if not space.fields[path_info.field_name] then
             return nil, string.format(
                 "path (%s) referencing to unknown field",
                 path
@@ -109,19 +136,10 @@ local function check_index_part_path(path, index, space)
     end
 
     do -- check that json_path can be used
-        if not db.json_path_allowed() and json_path ~= nil then
+        if not db.json_path_allowed() and path_info.type == 'json' then
             return nil, string.format(
                 "path (%s) is json_path, but your Tarantool version (%s) doesn't support this",
                 path, db.version()
-            )
-        end
-    end
-
-    do -- check, that json_path references to map field
-        if json_path ~= nil and space.fields[field_name].type ~= 'map' then
-            return nil, string.format(
-                "path (%s) is json_path. It references to field[%s] with type %s, but expected map",
-                path, field_name, space.fields[field_name].type
             )
         end
     end
@@ -244,10 +262,8 @@ local function check_index_part(i, index, space)
         end
     end
 
-    local field_name, json_path = unpack(string.split(part.path, '.', 1))
-    local space_format_field = space.fields[field_name]
-
-
+    local path_info = get_path_info(part.path)
+    local space_format_field = space.fields[path_info.field_name]
     do -- check part.type is valid and it is valid for index type
         local ok, err = check_index_part_type(part.type, index.type)
         if not ok then
@@ -258,16 +274,16 @@ local function check_index_part(i, index, space)
         end
     end
 
+
+
     do -- check index.part.type equals format.field.type
-        if space_format_field.type ~= 'any' then
-            if not (space_format_field.type == 'map' and json_path ~= nil) then
-                if space_format_field.type ~= part.type then
-                    return nil, string.format(
-                        "space[%q].indexes[%q].parts[%d].type: type differs" ..
-                        " from space.format.field[%q] (expected %s, got %s)",
-                        space.name, index.name, i, field_name, space_format_field.type, part.type
-                    )
-                end
+        if path_info.type == 'regular' and space_format_field.type ~= 'any' then
+            if space_format_field.type ~= part.type then
+                return nil, string.format(
+                    "space[%q].indexes[%q].parts[%d].type: type differs" ..
+                    " from space.format.field[%q] (expected %s, got %s)",
+                    space.name, index.name, i, path_info.field_name, space_format_field.type, part.type
+                )
             end
         end
     end
@@ -304,7 +320,7 @@ local function check_index_part(i, index, space)
             return nil, string.format(
                 "space[%q].indexes[%q].parts[%d].is_nullable: has different nullability with " ..
                 "space.foramat.field[%q] (expected %s, got %s)",
-                space.name, index.name, i, field_name, space_format_field.is_nullable, part.is_nullable
+                space.name, index.name, i, path_info.field_name, space_format_field.is_nullable, part.is_nullable
             )
         end
     end

@@ -597,8 +597,9 @@ function g.test_path()
             unique = true,
             parts = {{path = 'unsigned_nonnull.DATA["name"]', type = 'unsigned', is_nullable = false}}
         }},
-        [[space["test"].indexes["path_idx"].parts[1].path: path (unsigned_nonnull.DATA["name"])]] ..
-        [[ is json_path. It references to field[unsigned_nonnull] with type unsigned, but expected map]]
+        [[space["test"].index["path_idx"]: Field 1 has type 'unsigned' in one index, but type 'map' in another]]
+        -- [[space["test"].indexes["path_idx"].parts[1].path: path (unsigned_nonnull.DATA["name"])]] ..
+        -- [[ is json_path. It references to field[unsigned_nonnull] with type unsigned, but expected map]]
     )
 
     _test_index({pk, {
@@ -625,25 +626,26 @@ function g.test_multikey_path()
         parts = {{is_nullable = false, path = 'unsigned_nonnull', type = 'unsigned'}},
     }
 
-    if not db.v(2, 2) then
-        _test_index({
-            pk,
+    local multikey_index =  {
+        type = 'TREE',
+        name = 'secondary',
+        unique = true,
+        parts = {
             {
-                type = 'TREE',
-                name = 'secondary',
-                unique = true,
-                parts = {
-                    {
-                        path = 'map_nonnull.data[*].path',
-                        type = 'string',
-                        is_nullable = false,
-                        collation = 'unicode',
-                    },
-                },
-            }},
+                path = 'array_nonnull[*].path',
+                type = 'string',
+                is_nullable = false,
+                collation = 'unicode',
+            },
+        },
+    }
+
+    if not db.v(2, 2) then
+        _test_index(
+            {pk, multikey_index},
             string.format(
-                [[space["test"].indexes["secondary"].parts[1].path: path (map_nonnull.data[*].path) ]] ..
-                [[is json_path, but your Tarantool version (%s) doesn't support this]],
+                [[space["test"].indexes["secondary"].parts[1].path: path (array_nonnull[*].path) ]] ..
+                [[is multikey_path, but your Tarantool version (%s) doesn't support this]],
                 db.version()
             )
         )
@@ -651,20 +653,35 @@ function g.test_multikey_path()
     end
 
     _test_index({
-        pk,
-        {
+        pk, multikey_index
+    })
+
+    _test_index({
+        pk, {
+            name = 'path_idx',
             type = 'TREE',
-            name = 'secondary',
             unique = true,
             parts = {
                 {
-                    path = 'map_nonnull.data[*].path',
-                    type = 'string',
-                    is_nullable = false,
-                    collation = 'unicode',
-                },
-            },
-        }}
+                    path = 'array_nonnull[*].data',
+                    type = 'unsigned',
+                    is_nullable = false
+            }
+        }
+    }})
+
+    _test_index({pk, {
+            name = 'path_idx',
+            type = 'TREE',
+            unique = true,
+            parts = {
+                {
+                    path = 'map_nonnull[*].data',
+                    type = 'unsigned',is_nullable = false
+                }
+            }
+        }},
+        [[space["test"].index["path_idx"]: Field 15 has type 'map' in one index, but type 'array' in another]]
     )
 
     _test_index({

@@ -201,12 +201,12 @@ function g.test_index_part_json_path()
         local ok, err = ddl_check.check_index_part_path(
             'map_nonnull.data.name', {type = 'HASH'}, test_space_info
         )
-        t.assert_not(ok)
         t.assert_equals(err, string.format(
             [[path (map_nonnull.data.name) is json_path, ]] ..
             [[but your Tarantool version (%s) doesn't support this]],
             db.version()
         ))
+        t.assert_not(ok)
 
         t.success()
     end
@@ -232,6 +232,10 @@ function g.test_index_part_json_path()
         ))
         t.success()
     end
+
+    local ok, err = ddl_check.check_index_part_path('array_nonnull[*]', {type = 'TREE'}, test_space_info)
+    t.assert_not(err)
+    t.assert(ok)
 
     local ok, err = ddl_check.check_index_part_path(
         'map_nonnull.data[*].name', {type = 'HASH'}, test_space_info
@@ -883,21 +887,13 @@ function g.test_primary_index()
 
     local bad_index = table.deepcopy(good_index)
     bad_index.parts[3] = {path = 'map_nonnull.data[*].name', type = 'string', is_nullable = false}
-
-    local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
-    t.assert_not(ok)
     if db.v(2, 2) then
+        local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
+        t.assert_not(ok)
         t.assert_equals(err,
             [[space["space"].indexes["primary"].part[3].path: primary indexes doesn't]] ..
             [[ allows multikey, actually path (map_nonnull.data[*].name) is multikey]]
         )
-    else
-        t.assert_equals(err, string.format(
-            [[space["space"].indexes["primary"].parts[3].path: path ]] ..
-            [[(map_nonnull.data[*].name) is json_path, but your Tarantool version]] ..
-            [[ (%s) doesn't support this]],
-            db.version()
-        ))
     end
 
     local bad_index = table.deepcopy(good_index)
