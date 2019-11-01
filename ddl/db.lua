@@ -1,7 +1,7 @@
 #!/usr/bin/env tarantool
 
 local function version()
-    return require('tarantool').version
+    return _TARANTOOL
 end
 
 local function check_version(expected_major, expected_minor)

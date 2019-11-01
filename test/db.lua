@@ -19,7 +19,7 @@ local function drop_all()
 end
 
 local function version()
-    return require('tarantool').version
+    return _TARANTOOL
 end
 
 local function v(req_major, req_minor)
