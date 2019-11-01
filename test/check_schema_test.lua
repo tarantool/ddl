@@ -170,7 +170,7 @@ function g.test_varbinaty_index_part_type()
         t.assert_not(ok)
         t.assert_equals(err, string.format(
             "varbinary type isn't allowed in your Tarantool version (%s)",
-            db.version()
+            _TARANTOOL
         ))
     end
 end
@@ -204,7 +204,7 @@ function g.test_index_part_json_path()
         t.assert_equals(err, string.format(
             [[path (map_nonnull.data.name) is json_path, ]] ..
             [[but your Tarantool version (%s) doesn't support this]],
-            db.version()
+            _TARANTOOL
         ))
         t.assert_not(ok)
 
@@ -228,7 +228,7 @@ function g.test_index_part_json_path()
         t.assert_not(ok)
         t.assert_equals(err, string.format(
             [[path (map_nonnull.data[*].name) is multikey_path, but your Tarantool version]] ..
-            [[ (%s) doesn't support this]], db.version()
+            [[ (%s) doesn't support this]], _TARANTOOL
         ))
         t.success()
     end
@@ -1119,7 +1119,7 @@ function g.test_field()
         t.assert_equals(err, string.format(
             [[space["space"].fields["x"]: varbinary type ]] ..
             [[isn't allowed in your Tarantool version (%s)]],
-            db.version()
+            _TARANTOOL
         ))
     end
 end

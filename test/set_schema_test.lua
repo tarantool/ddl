@@ -541,7 +541,7 @@ function g.test_path()
                 [[space["test"].indexes["secondary"].parts[1].path: path ]] ..
                 [[(map_nonnull.DATA["name"]) is json_path, but your Tarantool ]] ..
                 [[version (%s) doesn't support this]],
-                db.version()
+                _TARANTOOL
             )
         )
         t.success()
@@ -644,9 +644,10 @@ function g.test_multikey_path()
         _test_index(
             {pk, multikey_index},
             string.format(
-                [[space["test"].indexes["secondary"].parts[1].path: path (array_nonnull[*].path) ]] ..
-                [[is multikey_path, but your Tarantool version (%s) doesn't support this]],
-                db.version()
+                [[space["test"].indexes["secondary"].parts[1].path:]] ..
+                [[ path (array_nonnull[*].path) is multikey_path,]] ..
+                [[ but your Tarantool version (%s) doesn't support this]],
+                _TARANTOOL
             )
         )
         t.success()

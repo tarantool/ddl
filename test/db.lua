@@ -18,17 +18,12 @@ local function drop_all()
     end
 end
 
-local function version()
-    return _TARANTOOL
-end
-
 local function v(req_major, req_minor)
     req_minor = req_minor or 0
     assert(type(req_major) == 'number')
     assert(type(req_minor) == 'number')
 
-    local version = require('tarantool').version
-    local t_major, t_minor = version:match('^(%d+)%.(%d+)')
+    local t_major, t_minor = string.match(_TARANTOOL, '^(%d+)%.(%d+)')
     t_major = tonumber(t_major)
     t_minor = tonumber(t_minor)
 
@@ -51,5 +46,4 @@ return {
 	init = init,
 	drop_all = drop_all,
     v = v,
-    version = version,
 }

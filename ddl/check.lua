@@ -64,7 +64,7 @@ local function check_field(i, field, space)
         if not db.varbinary_allowed() and field.type == 'varbinary' then
             return nil, string.format(
                 "space[%q].fields[%q]: varbinary type isn't allowed in your Tarantool version (%s)",
-                space.name, field.name, db.version()
+                space.name, field.name, _TARANTOOL
             )
         end
     end
@@ -139,7 +139,7 @@ local function check_index_part_path(path, index, space)
         if not db.json_path_allowed() and path_info.type == 'json' then
             return nil, string.format(
                 "path (%s) is json_path, but your Tarantool version (%s) doesn't support this",
-                path, db.version()
+                path, _TARANTOOL
             )
         end
     end
@@ -156,7 +156,7 @@ local function check_index_part_path(path, index, space)
             if not db.multikey_path_allowed() then
                 return nil, string.format(
                     "path (%s) is multikey_path, but your Tarantool version (%s) doesn't support this",
-                    path, db.version()
+                    path, _TARANTOOL
                 )
             end
 
@@ -202,7 +202,7 @@ local function check_index_part_type(part_type, index_type)
     if not db.varbinary_allowed() and part_type == 'varbinary' then
        return nil, string.format(
            "varbinary type isn't allowed in your Tarantool version (%s)",
-           db.version()
+           _TARANTOOL
         )
     end
 
