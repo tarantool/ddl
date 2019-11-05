@@ -5,23 +5,23 @@ Tarantool ddl module
 
  - ### Set spaces format
     `ddl.set_schema(schema)`
-    - If there was no one spaces before, than module creates them
-    - If space exists, then module checks format and indexes of that space
-    - If format/indexes are different from ones in DB then module returns error
-    - This module doesn't drop or alter indexes
-    - Spaces, that was omitted in ddl are ignored and aren't checked
+    - Если какого-то из спейсов не существовало - модуль его создаёт
+    - Если спейс существует, то модуль проверяет его формат/индексы
+    - Если формат/индексы хоть немного отличается - это ошибка
+    - Не удаляет и не изменят индексы
+    - Спейсы, не упомянутые в ddl игнорируются и не проверяются
 
-    Return values: true if there was no error, else returns nil, err
+    Возвращаемое значение: либо true, либо nil, err.
 
   - ### Check compatibility
     `ddl.check_schema(schema)`
-      - This function checks that set_schema call won't raise error
+      - Проверяет, что set_schema возможен без ошибок
 
-    Return values: true if there was no error, else returns nil, err
+    Возвращаемое значение: либо true, либо nil, err.
 
   - ### Get spaces format
     `ddl.get_schema()`
-    - This function scans spaces and returns db schema
+    - Сканит спейсы, возвращает схему
 
 
 ## Input data fromat
