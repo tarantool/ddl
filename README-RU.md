@@ -1,40 +1,39 @@
 # DDL
 
-DDL module for Tarantool 1.10+
+DDL-модуль для Tarantool 1.10+
 
-## Contents
+## Оглавление
 
 - [API](#api)
-  - [Set spaces format](#set-spaces-format)
-  - [Check compatibility](#check-compatibility)
-  - [Get spaces format](#get-spaces-format)
-- [Input data format](#input-data-format)
-- [Building and testing](#building-and-testing)
+  - [Задание формата спейсов](#задание-формата-спейсов)
+  - [Проверка совместимости](#проверка-совместимости)
+  - [Возвращение текущего формата спейсов](#возвращение-текущего-формата-спейсов)
+- [Входной формат спейсов](#входной-формат-спейсов)
+- [Сборка и тестирование](#сборка-и-тестирование)
 
 ## API
 
- - ### Set spaces format
+ - ### Задание формата спейсов
     `ddl.set_schema(schema)`
-    - If no spaces existed before, create them.
-    - If a space exists, check the space's format and indexes.
-    - If the format/indexes are different from those in the database,
-      return an error.
-    - The module doesn't drop or alter any indexes.
-    - Spaces omitted in the DDL are ignored, the module doesn't check them.
+    - Если какого-то из спейсов не существует, создать его.
+    - Если спейс существует, то проверить его формат и индексы.
+    - Если формат/индексы хоть немного отличаются, вернуть ошибку.
+    - Модуль не удаляет и не изменяет индексы.
+    - Спейсы, не упомянутые в DDL, игнорируются и не проверяются.
 
-    Return values: `true` if no error, otherwise return `nil, err`
+    Возвращаемое значение: либо `true`, либо `nil, err`
 
-  - ### Check compatibility
+  - ### Проверка совместимости
     `ddl.check_schema(schema)`
-    - Check that a `set_schema()` call will raise no error.
+    - Проверить, что вызов `set_schema()` возможен без ошибок.
 
-    Return values: `true` if no error, otherwise return `nil, err`
+    Возвращаемое значение: либо `true`, либо `nil, err`
 
-  - ### Get spaces format
+  - ### Возвращение текущего формата спейсов
     `ddl.get_schema()`
-    - Scan spaces and return the database schema.
+    - Сканировать все спейсы, вернуть схему.
 
-## Input data format
+## Входной формат спейсов
 ```
 format = {
     spaces = {
@@ -132,7 +131,7 @@ format = {
 }
 ```
 
-## Building and testing
+## Сборка и тестирование
 
 ```bash
 tarantoolctl rocks make
