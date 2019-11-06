@@ -1,30 +1,40 @@
 # DDL
-Tarantool ddl module
+
+Tarantool DDL (Data Definition Language) module
+
+## Contents
+
+- [API](#api)
+  - [Set spaces format](#set-spaces-format)
+  - [Check compatibility](#check-compatibility)
+  - [Get spaces format](#get-spaces-format)
+- [Input data format](#input-data-format)
+- [Building and testing](#building-and-testing)
 
 ## API
 
  - ### Set spaces format
     `ddl.set_schema(schema)`
-    - If there was no one spaces before, than module creates them
-    - If space exists, then module checks format and indexes of that space
-    - If format/indexes are different from ones in DB then module returns error
-    - This module doesn't drop or alter indexes
-    - Spaces, that was omitted in ddl are ignored and aren't checked
+    - If no spaces existed before, create them.
+    - If a space exists, check the space's format and indexes.
+    - If the format/indexes are different from those in the database,
+      return an error.
+    - The module doesn't drop or alter any indexes.
+    - Spaces omitted in the DDL are ignored, the module doesn't check them.
 
-    Return values: true if there was no error, else returns nil, err
+    Return values: `true` if no error, otherwise return `nil, err`
 
   - ### Check compatibility
     `ddl.check_schema(schema)`
-      - This function checks that set_schema call won't raise error
+      - Check that a `set_schema` call will raise no error.
 
-    Return values: true if there was no error, else returns nil, err
+    Return values: `true` if no error, otherwise return `nil, err`
 
   - ### Get spaces format
     `ddl.get_schema()`
-    - This function scans spaces and returns db schema
+    - Scan spaces and return the database schema.
 
-
-## Input data fromat
+## Input data format
 ```
 format = {
     spaces = {
@@ -43,15 +53,15 @@ format = {
                 ...
             },
             indexes = {
-                -- array of index paramters
+                -- array of index parameters
                 -- integer keys are used as index.id
-                -- index params depend on index type
+                -- index parameters depend on the index type
                 {
                     type = 'TREE'|'HASH',
                     name = '...',
                     unique = true|false, -- hash index is always unique
                     parts = {
-                        -- array of part params
+                        -- array of part parameters
                         {
                             path = string (field_name[.path] within field incl. multipath with[*],
                             type = '...',
@@ -72,7 +82,7 @@ format = {
                     name = '...',
                     unique = false, -- rtree can't be unique
                     parts = {
-                        -- array with only one part param
+                        -- array with only one part parameter
                         {
                             path = string (field_name[.path] within field,
                             type = 'array'
@@ -86,7 +96,7 @@ format = {
                     name = '...',
                     unique = false, -- bitset index can't be unique
                     parts = {
-                        -- array with only one part param
+                        -- array with only one part parameter
                         {
                             path = string (field_name[.path] within field,
                             type = 'unsigned | string'
