@@ -1,6 +1,6 @@
 # DDL
 
-Tarantool DDL (Data Definition Language) module
+DDL module for Tarantool 1.10+
 
 ## Contents
 
@@ -26,7 +26,7 @@ Tarantool DDL (Data Definition Language) module
 
   - ### Check compatibility
     `ddl.check_schema(schema)`
-      - Check that a `set_schema` call will raise no error.
+    - Check that a `set_schema()` call will raise no error.
 
     Return values: `true` if no error, otherwise return `nil, err`
 

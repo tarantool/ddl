@@ -1,30 +1,39 @@
 # DDL
-Tarantool ddl module
+
+DDL-модуль для Tarantool 1.10+
+
+## Оглавление
+
+- [API](#api)
+  - [Задание формата спейсов](#задание-формата-спейсов)
+  - [Проверка совместимости](#проверка-совместимости)
+  - [Возвращение текущего формата спейсов](#возвращение-текущего-формата-спейсов)
+- [Входной формат спейсов](#входной-формат-спейсов)
+- [Сборка и тестирование](#сборка-и-тестирование)
 
 ## API
 
- - ### Set spaces format
+ - ### Задание формата спейсов
     `ddl.set_schema(schema)`
-    - Если какого-то из спейсов не существовало - модуль его создаёт
-    - Если спейс существует, то модуль проверяет его формат/индексы
-    - Если формат/индексы хоть немного отличается - это ошибка
-    - Не удаляет и не изменят индексы
-    - Спейсы, не упомянутые в ddl игнорируются и не проверяются
+    - Если какого-то из спейсов не существует, создать его.
+    - Если спейс существует, то проверить его формат и индексы.
+    - Если формат/индексы хоть немного отличаются, вернуть ошибку.
+    - Модуль не удаляет и не изменяет индексы.
+    - Спейсы, не упомянутые в DDL, игнорируются и не проверяются.
 
-    Возвращаемое значение: либо true, либо nil, err.
+    Возвращаемое значение: либо `true`, либо `nil, err`
 
-  - ### Check compatibility
+  - ### Проверка совместимости
     `ddl.check_schema(schema)`
-      - Проверяет, что set_schema возможен без ошибок
+    - Проверить, что вызов `set_schema()` возможен без ошибок.
 
-    Возвращаемое значение: либо true, либо nil, err.
+    Возвращаемое значение: либо `true`, либо `nil, err`
 
-  - ### Get spaces format
+  - ### Возвращение текущего формата спейсов
     `ddl.get_schema()`
-    - Сканит спейсы, возвращает схему
+    - Сканировать все спейсы, вернуть схему.
 
-
-## Input data fromat
+## Входной формат спейсов
 ```
 format = {
     spaces = {
@@ -43,15 +52,15 @@ format = {
                 ...
             },
             indexes = {
-                -- array of index paramters
+                -- array of index parameters
                 -- integer keys are used as index.id
-                -- index params depend on index type
+                -- index parameters depend on the index type
                 {
                     type = 'TREE'|'HASH',
                     name = '...',
                     unique = true|false, -- hash index is always unique
                     parts = {
-                        -- array of part params
+                        -- array of part parameters
                         {
                             path = string (field_name[.path] within field incl. multipath with[*],
                             type = '...',
@@ -72,7 +81,7 @@ format = {
                     name = '...',
                     unique = false, -- rtree can't be unique
                     parts = {
-                        -- array with only one part param
+                        -- array with only one part parameter
                         {
                             path = string (field_name[.path] within field,
                             type = 'array'
@@ -86,7 +95,7 @@ format = {
                     name = '...',
                     unique = false, -- bitset index can't be unique
                     parts = {
-                        -- array with only one part param
+                        -- array with only one part parameter
                         {
                             path = string (field_name[.path] within field,
                             type = 'unsigned | string'
@@ -122,7 +131,7 @@ format = {
 }
 ```
 
-## Building and testing
+## Сборка и тестирование
 
 ```bash
 tarantoolctl rocks make
