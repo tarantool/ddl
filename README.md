@@ -4,12 +4,12 @@ DDL module for Tarantool 1.10+
 
 ## Contents
 
-- [API](#api)
-  - [Set spaces format](#set-spaces-format)
-  - [Check compatibility](#check-compatibility)
-  - [Get spaces format](#get-spaces-format)
-- [Input data format](#input-data-format)
-- [Building and testing](#building-and-testing)
+- [DDL](#ddl)
+  - [Contents](#contents)
+  - [API](#api)
+  - [Input data format](#input-data-format)
+  - [Bucket ID calculation example](#bucket-id-calculation-example)
+  - [Building and testing](#building-and-testing)
 
 ## API
 
@@ -34,8 +34,15 @@ DDL module for Tarantool 1.10+
     `ddl.get_schema()`
     - Scan spaces and return the database schema.
 
+  - ### Get bucket id
+    `ddl.bucket_id(schema, record, space_name, bucket_count)`
+    - Return `bucket_id` of the tuple according to `sharding_key` of a
+      particular space schema.
+    - Input param `record` is a key-value table
+
 ## Input data format
-```
+
+```lua
 format = {
     spaces = {
         [space_name] = {
@@ -63,16 +70,17 @@ format = {
                     parts = {
                         -- array of part parameters
                         {
-                            path = string (field_name[.path] within field incl. multipath with[*],
-                            type = '...',
-                            -- unsigned | string | varbinary | integer |
-                            -- number | boolean | scalar
-                            collation = nil|'none'|'unicode'|'unicode_ci'|...,
+                            path = field_name.jsonpath,
+                            -- may be multipath if '[*]' is used,
+                            type = 'unsigned' | 'string' | 'varbinary' |
+                                'integer' | 'number' | 'boolean' | 'scalar',
+                            is_nullable = true | false,
+                            collation = nil | 'none' |
+                                'unicode' | 'unicode_ci' | '...',
                             -- collation must be set, if and only if
-                            -- type =
+                            -- type == 'string'.
                             -- to see full list of collations
                             -- just run box.space._collation:select()
-                            is_nullable = true|false,
                         }
                     },
                     sequence = '...', -- sequence_name
@@ -84,8 +92,9 @@ format = {
                     parts = {
                         -- array with only one part parameter
                         {
-                            path = string (field_name[.path] within field,
-                            type = 'array'
+                            path = field_name.jsonpath,
+                            type = 'array',
+                            -- rtree index must use array field
                             is_nullable = true|false,
                         }
                     },
@@ -98,18 +107,23 @@ format = {
                     parts = {
                         -- array with only one part parameter
                         {
-                            path = string (field_name[.path] within field,
-                            type = 'unsigned | string'
+                            path = field_name.jsonpath,
+                            type = 'unsigned' | 'string',
+                            -- bitset index doesn't support any other
+                            -- field types
                             is_nullable = true|false,
                         }
                     },
                 },
                 ...
             },
+            sharding_key = nil | {
+                -- array of strings (field_names)
+            },
         },
         ...
     },
-    functions = {
+    functions = { -- Not implemented yet
         [function_name] = {
             body = '...',
             is_deterministic = true|false,
@@ -118,7 +132,7 @@ format = {
         },
         ...
     },
-    sequences = {
+    sequences = { -- Not implemented yet
         [seqence_name] = {
             start
             min
@@ -130,6 +144,15 @@ format = {
         }
     }
 }
+```
+
+## Bucket ID calculation example
+
+```lua
+local data = {'Ivan', 'Ivanov', 26}
+local bucket_id = ddl.bucket_id(schema, data, 'People')
+data.bucket_id = bucket_id
+vshard.router.callrw(bucket_id, 'box.space.People:insert', data)
 ```
 
 ## Building and testing

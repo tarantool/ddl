@@ -42,7 +42,34 @@ local function create_index(box_space, ddl_index)
     return true
 end
 
-local function create_space(space_name, space_schema)
+local function create_sharding_key(space_name, space)
+    if not space.sharding_key then
+        return true
+    end
+
+    local sharding_key_space = '_sharding_key'
+    local sharding_space = box.schema.space.create(sharding_key_space, {
+            format = {
+                {name = 'space_name', type = 'string', is_nullable = false},
+                {name = 'sharding_key', type = 'array', is_nullable = false}
+            },
+            if_not_exists = true
+        }
+    )
+    sharding_space:create_index(
+        'space_name', {
+            type = 'TREE',
+            unique = true,
+            parts = {{'space_name', 'string', is_nullable = false}},
+            if_not_exists = true
+        }
+    )
+
+    sharding_space:insert{space_name, space.sharding_key}
+    return true
+end
+
+local function create_space(space_name, space_schema, set_mode)
     local ok, data = pcall(box.schema.space.create, space_name, {
         engine = space_schema.engine,
         is_local = space_schema.is_local,
@@ -70,6 +97,13 @@ local function create_space(space_name, space_schema)
                 'space[%q].index[%q]: %s',  space_name, index.name or i,
                 data
             ), 0)
+        end
+    end
+
+    if set_mode then
+        local ok, err = pcall(create_sharding_key, space_name, space_schema)
+        if not ok then
+            return nil, string.format("space[%q].sharding_key: %s", space_name, err)
         end
     end
     return true
