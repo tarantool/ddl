@@ -1123,3 +1123,55 @@ function g.test_field()
         ))
     end
 end
+
+function g.test_scalar_types()
+    local index = {
+        name = 'pk',
+        type = 'TREE',
+        parts = {
+            {path = 'scalar_nonnull', type = 'integer', is_nullable = false},
+            {path = 'integer_nonnull', type = 'scalar', is_nullable = false},
+            {path = 'string_nonnull', type = 'string', is_nullable = false}
+        },
+        unique = true,
+    }
+
+    local space = table.deepcopy(test_space)
+    space.indexes = {index}
+
+    local res, err = ddl_check.check_space('space', space)
+    t.assert_equals(err, nil)
+    t.assert_equals(res, true)
+
+    local invalid_index = table.deepcopy(index)
+    invalid_index.parts[1] = {
+        path = 'integer_nonnull', type = 'string', is_nullable = false
+    }
+
+    space.indexes = {invalid_index}
+    local res, err = ddl_check.check_space('space', space)
+    t.assert_equals(err,
+        [[space["space"].indexes["pk"].parts[1].type: type differs from ]] ..
+        [[space.format.field["integer_nonnull"] (expected integer, got string)]]
+    )
+    t.assert_equals(res, nil)
+
+    index.type = 'RTREE'
+    index.unique = false
+    index.parts[1].type = 'array'
+    index.dimension = 8
+
+    index.distance = 'manhattan'
+
+    space.indexes = {
+        test_indexes[1],
+        index
+    }
+    local res, err = ddl_check.check_space('space', space)
+    t.assert_str_icontains(err,
+        [[space["space"].indexes["pk"].parts[1].type: type differs from ]] ..
+        [[space.format.field["scalar_nonnull"] (expected scalar, got array)]]
+    )
+    t.assert_equals(res, nil)
+
+end
