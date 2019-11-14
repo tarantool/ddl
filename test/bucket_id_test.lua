@@ -4,117 +4,132 @@ local t = require('luatest')
 local ddl = require('ddl')
 
 local g = t.group('bucket_id')
-local test_space = {
-    engine = 'memtx',
-    is_local = true,
-    temporary = false,
-    format = {
-        {name = 'unsigned_nonnull', type = 'unsigned', is_nullable = false},
-        {name = 'integer_nonnull', type = 'integer', is_nullable = false},
-        {name = 'map_nonnull', type = 'map', is_nullable = false},
-        {name = 'string_nonnull', type = 'string', is_nullable = false}
-    },
-}
 
-g.setup = function()
-    g.space = table.deepcopy(test_space)
-    table.insert(g.space.format, 1, {
-        name = 'bucket_id', type = 'unsigned', is_nullable = false
-    })
-
-    g.space.sharding_key = {'unsigned_nonnull', 'integer_nonnull', 'string_nonnull'}
-    g.schema = {spaces = {
-        space = g.space,
-    }}
+local function test_schema(sharding_key)
+    local test_space = {
+        engine = 'memtx',
+        is_local = true,
+        temporary = false,
+        format = {
+            {name = 'string_nonnull', type = 'string', is_nullable = false},
+            {name = 'integer_nonnull', type = 'integer', is_nullable = false},
+            {name = 'unsigned_nonnull', type = 'unsigned', is_nullable = false},
+            {name = 'anything', type = 'any', is_nullable = true},
+        },
+        indexes = {{
+            name = 'pk',
+            type = 'TREE',
+            unique = true,
+            parts = {
+                {path = 'string_nonnull', type = 'string', is_nullable = false},
+            },
+        }},
+    }
+    if sharding_key ~= nil then
+        table.insert(test_space.format,
+            {name = 'bucket_id', type = 'unsigned', is_nullable = false}
+        )
+        table.insert(test_space.indexes,
+            {
+                name = 'bucket_id',
+                type = 'HASH',
+                unique = false,
+                parts = {
+                    {path = 'bucket_id', type = 'unsigned', is_nullable = false},
+                }
+            }
+        )
+        test_space.sharding_key = sharding_key
+    end
+    return {spaces = {test = test_space}}
 end
 
 
 function g.test_invalid_input()
-    local ok, err = ddl.bucket_id()
-    t.assert_equals(ok, nil)
-    t.assert_str_icontains(err,
-        'Bad argument #1 to ddl.bucket_id (table expected, got nil)'
+    t.assert_error_msg_contains(
+        'Bad argument #1 to ddl.bucket_id (schema expected, got nil)',
+        ddl.bucket_id
     )
 
-    local ok, err = ddl.bucket_id({})
-    t.assert_equals(ok, nil)
-    t.assert_str_icontains(err,
-        'Bad argument #1 to ddl.bucket_id schema.spaces (table expected, got nil)'
+    t.assert_error_msg_contains(
+        'Bad argument #1 to ddl.bucket_id (invalid schema, missing spaces)',
+        ddl.bucket_id(), {}
     )
 
-    local ok, err = ddl.bucket_id({spaces = {}})
-    t.assert_equals(ok, nil)
+    t.assert_error_msg_contains(
+        'Bad argument #2 to ddl.bucket_id (table expected, got nil)',
+        ddl.bucket_i, {spaces = {}}
+    )
+
+    t.assert_error_msg_contains(
+        'Bad argument #3 to ddl.bucket_id (string expected, got nil)',
+        ddl.bucket_id, {spaces = {}}, {key = 'val'}
+    )
+
+    t.assert_error_msg_contains(
+        'Bad argument #4 to ddl.bucket_id (number expected, got nil)',
+        ddl.bucket_id, {spaces = {}}, {key = 'val'}, 'space'
+    )
+
+    t.assert_error_msg_contains(
+        'Bad argument #4 to ddl.bucket_id (positive expected, got 0)',
+        ddl.bucket_id, {spaces = {}}, {key = 'val'}, 'space', 0
+    )
+
+    local bucket_id, err = ddl.bucket_id(
+        test_schema(), {key = 'val'}, 'X', 4
+    )
+    t.assert_equals(bucket_id, nil)
     t.assert_equals(err,
-        'Bad argument #2 (expected table, got nil)'
+        "Space 'X' isn't defined in schema"
     )
 
-    local ok, err = ddl.bucket_id({spaces = {}}, {key = 'val'})
-    t.assert_equals(ok, nil)
+    local bucket_id, err = ddl.bucket_id(
+        test_schema(), {key = 'val'}, 'test', 4
+    )
+    t.assert_equals(bucket_id, nil)
     t.assert_equals(err,
-        'Bad argument #3 (expected string, got nil)'
+        "Space 'test' isn't sharded in schema"
     )
 
-    local ok, err = ddl.bucket_id({spaces = {}}, {key = 'val'}, 'space')
-    t.assert_equals(ok, nil)
-    t.assert_equals(err,
-        'Bad argument #4 (expected number, got nil)'
+    local bucket_id, err = ddl.bucket_id(
+        test_schema({'anything'}), {anything = {0}}, 'test', 4
     )
-
-    local ok, err = ddl.bucket_id({spaces = {}}, {key = 'val'}, 'space', 0)
-    t.assert_equals(ok, nil)
+    t.assert_equals(bucket_id, nil)
     t.assert_equals(err,
-        'Invalid bucket_count, it must be greater than 0'
-    )
-
-    local ok, err = ddl.bucket_id({spaces = {}}, {key = 'val'}, 'space', 4)
-    t.assert_equals(ok, nil)
-    t.assert_equals(err,
-        'No such space with name space'
-    )
-
-
-    local invalid_schema = table.deepcopy(g.schema)
-    invalid_schema.spaces.space.sharding_key = {'map_nonnull'}
-
-    local record = {
-        integer_nonnull = 5,
-        unsigned_nonnull = 6,
-        map_nonnull = {here = true}
-    }
-
-    local ok, err = ddl.bucket_id(invalid_schema, record, 'space', 4)
-    t.assert_equals(ok, nil)
-    t.assert_equals(err,
-        'Not supported key type (expected scalar, got table)'
+        'Unsupported value for sharding key "anything" (scalar expected, got table)'
     )
 end
 
+local function crc32(s)
+    local ret = require('digest').crc32.new()
+    ret:update(s)
+    return ret:result()
+end
+
 function g.test_ok()
-    local bucket_count = 8
+    local function check(shk, record, expected)
+        local uint32_max = 0xFFFFFFFFULL
+        local bucket_id, err = ddl.bucket_id(
+            test_schema(shk), record, 'test', uint32_max
+        )
+        t.assert_equals(err, nil)
+        t.assert_equals(bucket_id, crc32(expected))
+    end
+
     local record = {
-        integer_nonnull = 5,
-        unsigned_nonnull = 6,
-        map_nonnull = {here = true},
-        string_nonnull = 'string'
+        string_nonnull = '1',
+        integer_nonnull = 2,
+        unsigned_nonnull = 3,
+        anything = box.NULL,
     }
 
-    local crc32 = require('digest').crc32.new()
-    crc32:update(tostring(5))
-    crc32:update(tostring(6))
-    crc32:update('string')
-    local crc_res = crc32:result() % bucket_count
-
-    local old_res, err = ddl.bucket_id(g.schema, record, 'space', bucket_count)
-    t.assert_equals(err, nil)
-    t.assert_equals(old_res, crc_res)
-
-    local new_res, err = ddl.bucket_id(g.schema, record, 'space', bucket_count)
-    t.assert_equals(err, nil)
-    t.assert_equals(old_res, new_res)
-
-    record.string_nonnull = 'stringstringstring'
-    local new_res, err = ddl.bucket_id(g.schema, record, 'space', bucket_count)
-
-    t.assert_equals(err, nil)
-    t.assert_not_equals(old_res, new_res)
+    check({'string_nonnull'}, record, '1')
+    check({'string_nonnull', 'integer_nonnull'}, record, '12')
+    check({'string_nonnull', 'integer_nonnull', 'unsigned_nonnull'}, record, '123')
+    check({'string_nonnull', 'unsigned_nonnull'}, record, '13')
+    check({'unsigned_nonnull', 'string_nonnull'}, record, '31')
+    check({'anything'}, {}, 'nil')
+    check({'anything'}, {anything = 'nil'}, 'nil')
+    check({'anything'}, {anything = box.NULL}, 'nil')
 end
