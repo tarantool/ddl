@@ -1123,3 +1123,60 @@ function g.test_field()
         ))
     end
 end
+
+function g.test_scalar_types()
+    local function get_test_space(index)
+        local space = table.deepcopy(test_space)
+        space.indexes = {index}
+        return space
+    end
+
+    local index = {
+        name = 'pk',
+        type = 'TREE',
+        parts = {
+            -- shuffling interer <-> scalar in an index is valid
+            {path = 'scalar_nonnull', type = 'integer', is_nullable = false},
+            {path = 'integer_nonnull', type = 'scalar', is_nullable = false},
+        },
+        unique = true,
+    }
+    local res, err = ddl_check.check_space('space', get_test_space(index))
+    t.assert_equals(err, nil)
+    t.assert_equals(res, true)
+
+    --------------------------------------------------------------------
+
+    local index = {
+        name = 'pk',
+        type = 'TREE',
+        parts = {
+            {path = 'integer_nonnull', type = 'string', is_nullable = false},
+        },
+        unique = true,
+    }
+    local res, err = ddl_check.check_space('space', get_test_space(index))
+    t.assert_equals(err,
+        [[space["space"].indexes["pk"].parts[1].type: type differs from ]] ..
+        [[space.format.field["integer_nonnull"] (expected integer, got string)]]
+    )
+    t.assert_equals(res, nil)
+
+    --------------------------------------------------------------------
+
+    local index = {
+        name = 'pk',
+        type = 'TREE',
+        parts = {
+            {path = 'map_nonnull', type = 'scalar', is_nullable = false},
+        },
+        unique = true,
+    }
+    local res, err = ddl_check.check_space('space', get_test_space(index))
+    t.assert_str_icontains(err,
+        [[space["space"].indexes["pk"].parts[1].type: type differs from ]] ..
+        [[space.format.field["map_nonnull"] (expected map, got scalar)]]
+    )
+    t.assert_equals(res, nil)
+
+end

@@ -275,15 +275,31 @@ local function check_index_part(i, index, space)
     end
 
 
+    local scalar_types = {
+        unsigned = true,
+        integer = true,
+        scalar = true,
+        string = true,
+        number = true,
+        boolean = true,
+        varbinary = true,
+    }
 
     do -- check index.part.type equals format.field.type
         if path_info.type == 'regular' and space_format_field.type ~= 'any' then
-            if space_format_field.type ~= part.type then
-                return nil, string.format(
-                    "space[%q].indexes[%q].parts[%d].type: type differs" ..
-                    " from space.format.field[%q] (expected %s, got %s)",
-                    space.name, index.name, i, path_info.field_name, space_format_field.type, part.type
-                )
+            if not (
+                (part.type == 'scalar' and scalar_types[space_format_field.type]) or
+                (space_format_field.type == 'scalar' and scalar_types[part.type])
+            )
+            then
+                if space_format_field.type ~= part.type then
+                    return nil, string.format(
+                        "space[%q].indexes[%q].parts[%d].type: type differs" ..
+                        " from space.format.field[%q] (expected %s, got %s)",
+                        space.name, index.name, i, path_info.field_name,
+                        space_format_field.type, part.type
+                    )
+                end
             end
         end
     end
