@@ -79,11 +79,11 @@ local function _get_index(box_space, box_index)
 end
 
 local function get_space_sharding_key(space_name)
-    if box.space['_sharding_key'] == nil then
+    if box.space._ddl_sharding_key == nil then
         return nil
     end
 
-    local record = box.space['_sharding_key']:get{space_name}
+    local record = box.space._ddl_sharding_key:get{space_name}
     return record and record.sharding_key
 end
 

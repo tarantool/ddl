@@ -47,7 +47,7 @@ local function create_sharding_key(space_name, space)
         return
     end
 
-    box.space['_sharding_key']:insert{space_name, space.sharding_key}
+    box.space._ddl_sharding_key:insert{space_name, space.sharding_key}
 end
 
 local function create_space(space_name, space_schema, opts)

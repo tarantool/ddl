@@ -81,7 +81,7 @@ local function set_schema(schema)
         return nil, err
     end
 
-    local sharding_space = box.schema.space.create('_sharding_key', {
+    local sharding_space = box.schema.space.create('_ddl_sharding_key', {
         format = {
             {name = 'space_name', type = 'string', is_nullable = false},
             {name = 'sharding_key', type = 'array', is_nullable = false}
@@ -111,7 +111,7 @@ local function get_schema()
     local schema = {}
     local spaces = {}
     for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GT"}) do
-        if space.name ~= '_sharding_key' then
+        if space.name ~= '_ddl_sharding_key' then
             spaces[space.name] = ddl_get.get_space_schema(space.name)
         end
     end

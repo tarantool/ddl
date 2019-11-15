@@ -94,9 +94,9 @@ function g.test_no_sharding_spaces()
     t.assert_equals(err, nil)
     t.assert_equals(ok, true)
 
-    local _sharding_key = box.space['_sharding_key']
-    t.assert_not_equals(_sharding_key, nil)
-    t.assert_equals(_sharding_key:select(), {})
+    local _ddl_sharding_key = box.space['_ddl_sharding_key']
+    t.assert_not_equals(_ddl_sharding_key, nil)
+    t.assert_equals(_ddl_sharding_key:select(), {})
 
     local ddl_schema = ddl.get_schema()
     t.assert_equals(schema, ddl_schema)
@@ -107,12 +107,12 @@ function g.test_one_sharding_space_ok()
     t.assert_equals(err, nil)
     t.assert_equals(ok, true)
 
-    local _sharding_key = box.space['_sharding_key']
-    t.assert_not_equals(_sharding_key, nil)
-    t.assert_equals(_sharding_key:format(), sharding_key_format)
+    local _ddl_sharding_key = box.space['_ddl_sharding_key']
+    t.assert_not_equals(_ddl_sharding_key, nil)
+    t.assert_equals(_ddl_sharding_key:format(), sharding_key_format)
 
     t.assert_equals(
-        normalize_rows(_sharding_key:select()),
+        normalize_rows(_ddl_sharding_key:select()),
         {
             {'space', g.space.sharding_key}
         }
@@ -133,7 +133,7 @@ function g.test_invalid_format()
         [[no bucket_id in indexes]]
     )
 
-    t.assert_equals(box.space['_sharding_key'], nil)
+    t.assert_equals(box.space['_ddl_sharding_key'], nil)
 
     local ddl_schema = ddl.get_schema()
     t.assert_equals(ddl_schema, {spaces = {}})
@@ -161,11 +161,11 @@ function g.test_two_sharding_spaces()
     t.assert_equals(err, nil)
     t.assert_equals(ok, true)
 
-    local _sharding_key = box.space['_sharding_key']
-    t.assert_not_equals(_sharding_key, nil)
+    local _ddl_sharding_key = box.space['_ddl_sharding_key']
+    t.assert_not_equals(_ddl_sharding_key, nil)
 
     t.assert_items_equals(
-        normalize_rows(_sharding_key:select()),
+        normalize_rows(_ddl_sharding_key:select()),
         {
             {'space_one', g.space.sharding_key},
             {'space_two', space_two.sharding_key}
@@ -184,8 +184,8 @@ function g.test_apply_sequently()
     local ddl_schema = ddl.get_schema()
     t.assert_equals(ddl_schema, g.schema)
 
-    local _sharding_key = box.space['_sharding_key']
-    t.assert_not_equals(_sharding_key, nil)
+    local _ddl_sharding_key = box.space['_ddl_sharding_key']
+    t.assert_not_equals(_ddl_sharding_key, nil)
 
     local new_schema = table.deepcopy(g.schema)
     new_schema.spaces.new_space = g.space
@@ -194,11 +194,11 @@ function g.test_apply_sequently()
     t.assert_equals(err, nil)
     t.assert_equals(ok, true)
 
-    local _sharding_key = box.space['_sharding_key']
-    t.assert_not_equals(_sharding_key, nil)
+    local _ddl_sharding_key = box.space['_ddl_sharding_key']
+    t.assert_not_equals(_ddl_sharding_key, nil)
 
     t.assert_items_equals(
-        normalize_rows(_sharding_key:select()),
+        normalize_rows(_ddl_sharding_key:select()),
         {
             {'space', g.space.sharding_key},
             {'new_space', g.space.sharding_key}
