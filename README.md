@@ -34,6 +34,12 @@ DDL module for Tarantool 1.10+
     `ddl.get_schema()`
     - Scan spaces and return the database schema.
 
+  - ### Get bucket id
+    `ddl.bucket_id(schema, record, space_name, bucket_count)`
+    - Return `bucket_id` of the tuple according to `sharding_key` of a
+      particular space schema.
+    - Input param `record` is a key-value table
+
 ## Input data format
 
 ```lua
