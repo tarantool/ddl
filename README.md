@@ -4,12 +4,12 @@ DDL module for Tarantool 1.10+
 
 ## Contents
 
-- [DDL](#ddl)
-  - [Contents](#contents)
-  - [API](#api)
-  - [Input data format](#input-data-format)
-  - [Bucket ID calculation example](#bucket-id-calculation-example)
-  - [Building and testing](#building-and-testing)
+- [API](#api)
+  - [Set spaces format](#set-spaces-format)
+  - [Check compatibility](#check-compatibility)
+  - [Get spaces format](#get-spaces-format)
+- [Input data format](#input-data-format)
+- [Building and testing](#building-and-testing)
 
 ## API
 
