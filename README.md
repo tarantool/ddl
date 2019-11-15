@@ -34,12 +34,6 @@ DDL module for Tarantool 1.10+
     `ddl.get_schema()`
     - Scan spaces and return the database schema.
 
-  - ### Get bucket id
-    `ddl.bucket_id(schema, record, space_name, bucket_count)`
-    - Return `bucket_id` of the tuple according to `sharding_key` of a
-      particular space schema.
-    - Input param `record` is a key-value table
-
 ## Input data format
 
 ```lua
@@ -119,6 +113,18 @@ format = {
             },
             sharding_key = nil | {
                 -- array of strings (field_names)
+                --
+                -- sharded space must have:
+                -- field: {name = 'bucket_id', is_nullable = false, type = 'unsigned'}
+                -- index: {
+                --     name = 'bucket_id',
+                --     type = 'TREE',
+                --     unique = false,
+                --     parts = {{path = 'bucket_id', is_nullable = false, type = 'unsigned'}}
+                -- }
+                --
+                -- unsharded spaces must NOT have
+                -- field and index named 'bucket_id'
             },
         },
         ...
@@ -146,13 +152,81 @@ format = {
 }
 ```
 
-## Bucket ID calculation example
+## Schema example
 
 ```lua
-local data = {'Ivan', 'Ivanov', 26}
-local bucket_id = ddl.bucket_id(schema, data, 'People')
-data.bucket_id = bucket_id
-vshard.router.callrw(bucket_id, 'box.space.People:insert', data)
+local schema = {
+    spaces = {
+        customer = {
+            engine = 'memtx',
+            is_local = false,
+            temporary = false,
+            format = {
+                {name = 'customer_id', is_nullable = false, type = 'unsigned'},
+                {name = 'bucket_id', is_nullable = false, type = 'unsigned'},
+                {name = 'fullname', is_nullable = false, type = 'string'},
+            },
+            indexes = {{
+                name = 'customer_id',
+                type = 'TREE',
+                unique = true,
+                parts = {
+                    {path = 'customer_id', is_nullable = false, type = 'unsigned'}
+                }
+            }, {
+                name = 'bucket_id',
+                type = 'TREE',
+                unique = false,
+                parts = {
+                    {path = 'bucket_id', is_nullable = false, type = 'unsigned'}
+                }
+            }, {
+                name = 'fullname',
+                type = 'TREE',
+                unique = true,
+                parts = {
+                    {path = 'fullname', is_nullable = false, type = 'string'}
+                }
+            }},
+            sharding_key = {'customer_id'},
+        },
+        account = {
+            engine = 'memtx',
+            is_local = false,
+            temporary = false,
+            format = {
+                {name = 'account_id', is_nullable = false, type = 'unsigned'},
+                {name = 'customer_id', is_nullable = false, type = 'unsigned'},
+                {name = 'bucket_id', is_nullable = false, type = 'unsigned'},
+                {name = 'balance', is_nullable = false, type = 'string'},
+                {name = 'name', is_nullable = false, type = 'string'},
+            },
+            indexes = {{
+                name = 'account_id',
+                type = 'TREE',
+                unique = true,
+                parts = {
+                    {path = 'account_id', is_nullable = false, type = 'unsigned'}
+                }
+            }, {
+                name = 'customer_id',
+                type = 'TREE',
+                unique = false,
+                parts = {
+                    {path = 'customer_id', is_nullable = false, type = 'unsigned'}
+                }
+            }, {
+                name = 'bucket_id',
+                type = 'TREE',
+                unique = false,
+                parts = {
+                    {path = 'bucket_id', is_nullable = false, type = 'unsigned'}
+                }
+            }},
+            sharding_key = {'customer_id'},
+        }
+    }
+}
 ```
 
 ## Building and testing
