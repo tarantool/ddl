@@ -94,7 +94,12 @@ function g.test_no_sharding_spaces()
     t.assert_equals(err, nil)
     t.assert_equals(ok, true)
 
-    t.assert_equals(box.space['_sharding_key'], nil)
+    local _sharding_key = box.space['_sharding_key']
+    t.assert_not_equals(_sharding_key, nil)
+    t.assert_equals(_sharding_key:select(), {})
+
+    local ddl_schema = ddl.get_schema()
+    t.assert_equals(schema, ddl_schema)
 end
 
 function g.test_one_sharding_space_ok()

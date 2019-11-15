@@ -7,42 +7,24 @@ local utils = require('ddl.utils')
 local ldigest = require('digest')
 
 local function check_schema_format(schema)
-    local caller_name = debug.getinfo(3, "n").name
-    local err_msg = 'Bad argument #1 to ddl.' .. caller_name
+    local err_msg = 'Bad argument #1 to ddl.%s'
 
     if type(schema) ~= 'table' then
-        error(err_msg ..
-            ' (table expected, got ' .. type(schema) .. ')',
-        3)
+        return nil, err_msg .. ' (schema expected, got ' .. type(schema) .. ')'
     end
 
     if type(schema.spaces) ~= 'table' then
-        error(err_msg ..
-        ' schema.spaces (table expected, got ' .. type(schema.spaces) .. ')',
-        3)
+        return nil, err_msg ..' invalid schema.spaces (table expected, got ' ..
+            type(schema.spaces) .. ')'
     end
 
-    -- for k, v in pairs(schema.spaces) do
-    --     if type(k) ~= 'string' then
-    --         error(err_msg ..
-    --             ' shema.spaces (expected key value table, where key (space name) with type string, actual ' ..
-    --             type(k) .. ')',
-    --         2)
-    --     end
-
-    --     if type(v) ~= 'table' then
-    --         error(err_msg ..
-    --             ' shema.spaces expected (key value table, where value (space info) type table, actual ' ..
-    --             type(v) .. ')',
-    --         2)
-    --     end
-    -- end
+    return true
 end
 
 local function check_schema(schema)
-    local ok, err = pcall(check_schema_format, schema)
+    local ok, err = check_schema_format(schema)
     if not ok then
-        return nil, err
+        return nil, string.format(err, 'check_schema')
     end
 
     if type(box.cfg) == 'function' then
@@ -72,7 +54,7 @@ local function check_schema(schema)
         else
             local ok, err = pcall(
                 ddl_set.create_space,
-                '_ddl_dummy', space_schema
+                space_name, space_schema, {dummy = true}
             )
 
             local dummy = box.space['_ddl_dummy']
@@ -90,9 +72,9 @@ local function check_schema(schema)
 end
 
 local function set_schema(schema)
-    local ok, err = pcall(check_schema_format, schema)
+    local ok, err = check_schema_format(schema)
     if not ok then
-        return nil, err
+        return nil, string.format(err, 'set_schema')
     end
 
     local ok, err = check_schema(schema)
@@ -100,9 +82,25 @@ local function set_schema(schema)
         return nil, err
     end
 
+    local sharding_space = box.schema.space.create('_sharding_key', {
+        format = {
+            {name = 'space_name', type = 'string', is_nullable = false},
+            {name = 'sharding_key', type = 'array', is_nullable = false}
+        },
+        if_not_exists = true
+    })
+    sharding_space:create_index(
+        'space_name', {
+            type = 'TREE',
+            unique = true,
+            parts = {{'space_name', 'string', is_nullable = false}},
+            if_not_exists = true
+        }
+    )
+
     for space_name, space_schema in pairs(schema.spaces) do
         if box.space[space_name] == nil then
-            ddl_set.create_space(space_name, space_schema, true)
+            ddl_set.create_space(space_name, space_schema)
         end
     end
 
@@ -123,50 +121,75 @@ local function get_schema()
     return schema
 end
 
+
+local function get_value(space, record, key)
+    local field_position = {}
+    for i, field in ipairs(space.format) do
+        field_position[field.name] = i
+    end
+
+    local val = record[key]
+    if not val then
+        val = record[field_position[key]]
+    end
+    return val
+end
+
 local function bucket_id(schema, record, space_name, bucket_count)
-    local ok, err = pcall(check_schema_format, schema)
+    local ok, err = check_schema_format(schema)
     if not ok then
-        return nil, err
+        error(string.format(err, 'bucket_id'))
     end
 
     if type(record) ~= 'table' then
-        return nil, string.format(
-            'Bad argument #2 (expected table, got %s)',
+        error(string.format(
+            'Bad argument #2 to ddl.bucket_id (table expected, got %s)',
             type(record)
-        )
+        ))
     end
 
     if type(space_name) ~= 'string' then
-        return nil, string.format(
-            'Bad argument #3 (expected string, got %s)',
+        error(string.format(
+            'Bad argument #3 to ddl.bucket_id (string expected, got %s)',
             type(space_name)
-        )
+        ))
     end
 
     if type(bucket_count) ~= 'number' then
-        return nil, string.format(
-            'Bad argument #4 (expected number, got %s)',
+        error(string.format(
+            'Bad argument #4 to ddl.bucket_id (number expected, got %s)',
             type(bucket_count)
-        )
+        ))
     end
 
     if bucket_count < 1 then
-        return nil, string.format('Invalid bucket_count, it must be greater than 0')
+        error(string.format(
+            'Bad argument #4 to ddl.bucket_id (positive expected, got %s)',
+            bucket_count
+        ))
     end
 
     local space = schema.spaces[space_name]
     if not space then
-        return nil, 'No such space with name ' .. space_name
+        return nil, string.format("Space %q isn't defined in schema", space_name)
     end
 
     local sharding_key = space.sharding_key
-    local crc32 = ldigest.crc32.new()
+    if not space.sharding_key then
+        return nil, string.format(
+            "Space %q isn't sharded in schema", space_name
+        )
+    end
 
+    local crc32 = ldigest.crc32.new()
     for _, key in ipairs(sharding_key) do
-        local value = record[key]
+        local value = get_value(space, record, key)
 
         if type(value) == 'table' then
-            return nil, 'Not supported key type (expected scalar, got table)'
+            return nil, string.format(
+                'Unsupported value for sharding key %q (scalar expected, got table)',
+                key
+            )
         end
 
         crc32:update(tostring(value))

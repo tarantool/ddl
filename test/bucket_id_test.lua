@@ -52,13 +52,13 @@ function g.test_invalid_input()
     )
 
     t.assert_error_msg_contains(
-        'Bad argument #1 to ddl.bucket_id (invalid schema, missing spaces)',
-        ddl.bucket_id(), {}
+        'Bad argument #1 to ddl.bucket_id invalid schema.spaces (table expected, got nil)',
+        ddl.bucket_id, {}
     )
 
     t.assert_error_msg_contains(
         'Bad argument #2 to ddl.bucket_id (table expected, got nil)',
-        ddl.bucket_i, {spaces = {}}
+        ddl.bucket_id, {spaces = {}}
     )
 
     t.assert_error_msg_contains(
@@ -81,7 +81,7 @@ function g.test_invalid_input()
     )
     t.assert_equals(bucket_id, nil)
     t.assert_equals(err,
-        "Space 'X' isn't defined in schema"
+        [[Space "X" isn't defined in schema]]
     )
 
     local bucket_id, err = ddl.bucket_id(
@@ -89,11 +89,19 @@ function g.test_invalid_input()
     )
     t.assert_equals(bucket_id, nil)
     t.assert_equals(err,
-        "Space 'test' isn't sharded in schema"
+        [[Space "test" isn't sharded in schema]]
     )
 
     local bucket_id, err = ddl.bucket_id(
         test_schema({'anything'}), {anything = {0}}, 'test', 4
+    )
+    t.assert_equals(bucket_id, nil)
+    t.assert_equals(err,
+        'Unsupported value for sharding key "anything" (scalar expected, got table)'
+    )
+
+    local bucket_id, err = ddl.bucket_id(
+        test_schema({'anything'}), {'a', 1, 2, {0}}, 'test', 4
     )
     t.assert_equals(bucket_id, nil)
     t.assert_equals(err,
@@ -109,12 +117,12 @@ end
 
 function g.test_ok()
     local function check(shk, record, expected)
-        local uint32_max = 0xFFFFFFFFULL
+        local uint32_max = tonumber(0xFFFFFFFFULL)
         local bucket_id, err = ddl.bucket_id(
             test_schema(shk), record, 'test', uint32_max
         )
         t.assert_equals(err, nil)
-        t.assert_equals(bucket_id, crc32(expected))
+        t.assert_equals(bucket_id, crc32(expected) + 1)
     end
 
     local record = {
@@ -123,6 +131,8 @@ function g.test_ok()
         unsigned_nonnull = 3,
         anything = box.NULL,
     }
+
+    local record = {'1', 2, 3, box.NULL}
 
     check({'string_nonnull'}, record, '1')
     check({'string_nonnull', 'integer_nonnull'}, record, '12')
