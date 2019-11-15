@@ -42,7 +42,21 @@ local function create_index(box_space, ddl_index)
     return true
 end
 
-local function create_space(space_name, space_schema)
+local function create_sharding_key(space_name, space)
+    if not space.sharding_key then
+        return
+    end
+
+    box.space._ddl_sharding_key:insert{space_name, space.sharding_key}
+end
+
+local function create_space(space_name, space_schema, opts)
+    local is_dummy = opts and opts.dummy
+    if is_dummy then
+        space_name = '_ddl_dummy'
+    end
+
+
     local ok, data = pcall(box.schema.space.create, space_name, {
         engine = space_schema.engine,
         is_local = space_schema.is_local,
@@ -70,6 +84,14 @@ local function create_space(space_name, space_schema)
                 'space[%q].index[%q]: %s',  space_name, index.name or i,
                 data
             ), 0)
+        end
+    end
+
+    if not is_dummy then
+        local ok, err = pcall(create_sharding_key, space_name, space_schema)
+        require('log').info(err)
+        if not ok then
+            return nil, string.format("space[%q].sharding_key: %s", space_name, err)
         end
     end
     return true

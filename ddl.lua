@@ -6,43 +6,24 @@ local ddl_check = require('ddl.check')
 local utils = require('ddl.utils')
 
 local function check_schema_format(schema)
-    local caller_name = debug.getinfo(3, "n").name
-    local err_msg = 'Bad argument #1 to ddl.' .. caller_name
+    local err_msg = 'Bad argument #1 to ddl.%s'
 
     if type(schema) ~= 'table' then
-        error(err_msg ..
-            ' (table expected, got ' .. type(schema) .. ')',
-        3)
+        return nil, err_msg .. ' (schema expected, got ' .. type(schema) .. ')'
     end
 
     if type(schema.spaces) ~= 'table' then
-        error(err_msg ..
-        ' schema.spaces (table expected, got ' .. type(schema.spaces) .. ')',
-        3)
+        return nil, err_msg ..' invalid schema.spaces (table expected, got ' ..
+            type(schema.spaces) .. ')'
     end
 
-
-    -- for k, v in pairs(schema.spaces) do
-    --     if type(k) ~= 'string' then
-    --         error(err_msg ..
-    --             ' shema.spaces (expected key value table, where key (space name) with type string, actual ' ..
-    --             type(k) .. ')',
-    --         2)
-    --     end
-
-    --     if type(v) ~= 'table' then
-    --         error(err_msg ..
-    --             ' shema.spaces expected (key value table, where value (space info) type table, actual ' ..
-    --             type(v) .. ')',
-    --         2)
-    --     end
-    -- end
+    return true
 end
 
 local function check_schema(schema)
-    local ok, err = pcall(check_schema_format, schema)
+    local ok, err = check_schema_format(schema)
     if not ok then
-        return nil, err
+        return nil, string.format(err, 'check_schema')
     end
 
     if type(box.cfg) == 'function' then
@@ -72,7 +53,7 @@ local function check_schema(schema)
         else
             local ok, err = pcall(
                 ddl_set.create_space,
-                '_ddl_dummy', space_schema
+                space_name, space_schema, {dummy = true}
             )
 
             local dummy = box.space['_ddl_dummy']
@@ -90,15 +71,31 @@ local function check_schema(schema)
 end
 
 local function set_schema(schema)
-    local ok, err = pcall(check_schema_format, schema)
+    local ok, err = check_schema_format(schema)
     if not ok then
-        return nil, err
+        return nil, string.format(err, 'set_schema')
     end
 
     local ok, err = check_schema(schema)
     if not ok then
         return nil, err
     end
+
+    local sharding_space = box.schema.space.create('_ddl_sharding_key', {
+        format = {
+            {name = 'space_name', type = 'string', is_nullable = false},
+            {name = 'sharding_key', type = 'array', is_nullable = false}
+        },
+        if_not_exists = true
+    })
+    sharding_space:create_index(
+        'space_name', {
+            type = 'TREE',
+            unique = true,
+            parts = {{'space_name', 'string', is_nullable = false}},
+            if_not_exists = true
+        }
+    )
 
     for space_name, space_schema in pairs(schema.spaces) do
         if box.space[space_name] == nil then
@@ -114,13 +111,14 @@ local function get_schema()
     local schema = {}
     local spaces = {}
     for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GT"}) do
-        spaces[space.name] = ddl_get.get_space_schema(space.name)
+        if space.name ~= '_ddl_sharding_key' then
+            spaces[space.name] = ddl_get.get_space_schema(space.name)
+        end
     end
 
     schema.spaces = spaces
     return schema
 end
-
 
 return {
     check_schema = check_schema,

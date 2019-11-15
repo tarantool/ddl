@@ -623,6 +623,123 @@ local function check_index(i, index, space)
     return true
 end
 
+local function check_sharding_key(space)
+    if not space.sharding_key then
+        if space.fields.bucket_id ~= nil then
+            return nil, string.format(
+                "space[%q].format[%q]: 'bucket_id' used for sharding, " ..
+                "but no sharding_key was supplied",
+                space.name, 'bucket_id'
+            )
+        end
+
+        if space.indexes.bucket_id ~= nil then
+            return nil, string.format(
+                "space[%q].indexes[%q]: 'bucket_id' used for sharding, " ..
+                "but no sharding_key was supplied",
+                space.name, 'bucket_id'
+            )
+        end
+        return true
+    end
+
+    do -- chek that format['bucket_id'] valid
+        if not space.fields.bucket_id then
+            return nil, string.format(
+                "space[%q].format: sharding_key exists in space, but there is" ..
+                " no bucket_id in format",
+                space.name
+            )
+        end
+
+        if space.fields.bucket_id.type ~= 'unsigned' then
+            return nil, string.format(
+                "space[%q].format['bucket_id']: field type incorrect (expected unsigned, got %s)",
+                space.name, space.fields.bucket_id.type
+            )
+        end
+    end
+
+    do -- check that inedxes['bucket_id'] valid
+        if not space.indexes.bucket_id then
+            return nil, string.format(
+                "space[%q].indexes: sharding_key exists in space, but there is" ..
+                " no bucket_id in indexes", space.name
+            )
+        end
+
+        if space.indexes.bucket_id.unique then
+            return nil, string.format(
+                "space[%q].indexes[%q]: bucket_id index can't be unique",
+                space.name, 'bucket_id'
+            )
+        end
+
+        if #space.indexes['bucket_id'].parts ~= 1 then
+            return nil, string.format(
+                "space[%q].indexes['bucket_id']: incorrect parts size (expected 1, got %d)",
+                space.name, #space.indexes['bucket_id'].parts
+            )
+        end
+
+        if space.indexes['bucket_id'].parts[1].path ~= 'bucket_id' then
+            return nil, string.format(
+                "space[%q].indexes['bucket_id'].parts[1].path: invalid field reference" ..
+                "(expected reference to bucket_id, got %s)",
+                space.name, space.indexes['bucket_id'].parts[1].path
+            )
+        end
+    end
+
+    do -- check that sharding_key format is valid
+        if not utils.is_array(space.sharding_key) then
+            return nil, string.format(
+                "space[%q]: bad argument 'sharding_key' (contiguous array expected, got %s)",
+                space.name, type(space.sharding_key)
+            )
+        end
+
+        local duplicates = {}
+        for _, key in ipairs(space.sharding_key) do
+            if duplicates[key] then
+                return nil, string.format(
+                    'space[%q].sharding_key: sharding_key contains duplicate %q',
+                    space.name, key
+                )
+            end
+            duplicates[key] = true
+        end
+    end
+
+    -- check sharding_key path is valid
+    for _, path_to_field in ipairs(space.sharding_key) do
+        local path = get_path_info(path_to_field)
+        if path.type ~= 'regular' then
+            return nil, string.format(
+                "space[%q].sharding_key[%q]: key with %s part is unsupported yet",
+                space.name, path_to_field, path.type
+            )
+        end
+
+        local field = space.fields[path.field_name]
+        if not field then
+            return nil, string.format(
+                "space[%q].sharding_key[%q]: invalid reference to format[%q], no such field",
+                space.name, path_to_field, path.field_name
+            )
+        end
+
+        if field.type == 'map' or field.type == 'array' then
+            return nil, string.format(
+                "space[%q].sharding_key[%q]: key refereces to field " ..
+                "with type %s, but it's unsupported yet",
+                space.name, path_to_field, field.type
+            )
+        end
+    end
+    return true
+end
+
 
 local function check_space(space_name, space)
     if type(space_name) ~= 'string' then
@@ -720,6 +837,9 @@ local function check_space(space_name, space)
         end
     end
 
+    -- auxiliary kv-map to help sharding_key validation
+    local space_indexes = {}
+
     do -- check indexes
         if not utils.is_array(space.indexes) then
             return nil, string.format(
@@ -728,7 +848,7 @@ local function check_space(space_name, space)
                 space_name, type(space.indexes)
             )
         end
-        local used_names = {}
+
         for i, index in ipairs(space.indexes) do
             local ok, err = check_index(i, index, {
                 name = space_name,
@@ -740,20 +860,33 @@ local function check_space(space_name, space)
                 return nil, err
             end
 
-            if used_names[index.name] then
+            if space_indexes[index.name] ~= nil then
                 return nil, string.format(
                     "space[%q].index[%d].name: this name %q already used in this space.indexes",
-                    space_name, i, index.name, space_name, used_names[index.name].id
+                    space_name, i, index.name, space_name, space_indexes[index.name].id
                 )
             end
 
-            used_names[index.name] = {id = i}
+            local index_info = table.deepcopy(index)
+            index_info.id = i
+            space_indexes[index.name] = index_info
         end
+    end
+
+    local ok, err = check_sharding_key({
+        name = space_name,
+        sharding_key = space.sharding_key,
+        indexes = space_indexes,
+        fields = space_fields
+    })
+
+    if not ok then
+        return nil, err
     end
 
     -- check redundant keys
     local k = utils.redundant_key(space,
-        {'engine', 'is_local', 'temporary', 'format', 'indexes'}
+        {'engine', 'is_local', 'temporary', 'format', 'indexes', 'sharding_key'}
     )
     if k ~= nil then
         return nil, string.format(
@@ -775,4 +908,5 @@ return {
     check_index_parts = check_index_parts,
     check_index = check_index,
     check_field = check_field,
+    check_sharding_key = check_sharding_key
 }

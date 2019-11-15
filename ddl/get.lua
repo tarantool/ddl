@@ -78,6 +78,15 @@ local function _get_index(box_space, box_index)
     return ddl_index
 end
 
+local function get_space_sharding_key(space_name)
+    if box.space._ddl_sharding_key == nil then
+        return nil
+    end
+
+    local record = box.space._ddl_sharding_key:get{space_name}
+    return record and record.sharding_key
+end
+
 local function get_space_schema(space_name)
     local box_space = box.space[space_name]
     assert(box_space ~= nil)
@@ -87,6 +96,7 @@ local function get_space_schema(space_name)
     space_ddl.temporary = box_space.temporary
     space_ddl.engine = box_space.engine
     space_ddl.format = box_space:format()
+    space_ddl.sharding_key = get_space_sharding_key(space_name)
     for _, field in ipairs(space_ddl.format) do
         if field.is_nullable == nil then
             field.is_nullable = false

@@ -35,7 +35,8 @@ DDL module for Tarantool 1.10+
     - Scan spaces and return the database schema.
 
 ## Input data format
-```
+
+```lua
 format = {
     spaces = {
         [space_name] = {
@@ -63,16 +64,17 @@ format = {
                     parts = {
                         -- array of part parameters
                         {
-                            path = string (field_name[.path] within field incl. multipath with[*],
-                            type = '...',
-                            -- unsigned | string | varbinary | integer |
-                            -- number | boolean | scalar
-                            collation = nil|'none'|'unicode'|'unicode_ci'|...,
+                            path = field_name.jsonpath,
+                            -- may be multipath if '[*]' is used,
+                            type = 'unsigned' | 'string' | 'varbinary' |
+                                'integer' | 'number' | 'boolean' | 'scalar',
+                            is_nullable = true | false,
+                            collation = nil | 'none' |
+                                'unicode' | 'unicode_ci' | '...',
                             -- collation must be set, if and only if
-                            -- type =
+                            -- type == 'string'.
                             -- to see full list of collations
                             -- just run box.space._collation:select()
-                            is_nullable = true|false,
                         }
                     },
                     sequence = '...', -- sequence_name
@@ -84,8 +86,9 @@ format = {
                     parts = {
                         -- array with only one part parameter
                         {
-                            path = string (field_name[.path] within field,
-                            type = 'array'
+                            path = field_name.jsonpath,
+                            type = 'array',
+                            -- rtree index must use array field
                             is_nullable = true|false,
                         }
                     },
@@ -98,18 +101,35 @@ format = {
                     parts = {
                         -- array with only one part parameter
                         {
-                            path = string (field_name[.path] within field,
-                            type = 'unsigned | string'
+                            path = field_name.jsonpath,
+                            type = 'unsigned' | 'string',
+                            -- bitset index doesn't support any other
+                            -- field types
                             is_nullable = true|false,
                         }
                     },
                 },
                 ...
             },
+            sharding_key = nil | {
+                -- array of strings (field_names)
+                --
+                -- sharded space must have:
+                -- field: {name = 'bucket_id', is_nullable = false, type = 'unsigned'}
+                -- index: {
+                --     name = 'bucket_id',
+                --     type = 'TREE',
+                --     unique = false,
+                --     parts = {{path = 'bucket_id', is_nullable = false, type = 'unsigned'}}
+                -- }
+                --
+                -- unsharded spaces must NOT have
+                -- field and index named 'bucket_id'
+            },
         },
         ...
     },
-    functions = {
+    functions = { -- Not implemented yet
         [function_name] = {
             body = '...',
             is_deterministic = true|false,
@@ -118,7 +138,7 @@ format = {
         },
         ...
     },
-    sequences = {
+    sequences = { -- Not implemented yet
         [seqence_name] = {
             start
             min
@@ -127,6 +147,83 @@ format = {
             cache
             step
 
+        }
+    }
+}
+```
+
+## Schema example
+
+```lua
+local schema = {
+    spaces = {
+        customer = {
+            engine = 'memtx',
+            is_local = false,
+            temporary = false,
+            format = {
+                {name = 'customer_id', is_nullable = false, type = 'unsigned'},
+                {name = 'bucket_id', is_nullable = false, type = 'unsigned'},
+                {name = 'fullname', is_nullable = false, type = 'string'},
+            },
+            indexes = {{
+                name = 'customer_id',
+                type = 'TREE',
+                unique = true,
+                parts = {
+                    {path = 'customer_id', is_nullable = false, type = 'unsigned'}
+                }
+            }, {
+                name = 'bucket_id',
+                type = 'TREE',
+                unique = false,
+                parts = {
+                    {path = 'bucket_id', is_nullable = false, type = 'unsigned'}
+                }
+            }, {
+                name = 'fullname',
+                type = 'TREE',
+                unique = true,
+                parts = {
+                    {path = 'fullname', is_nullable = false, type = 'string'}
+                }
+            }},
+            sharding_key = {'customer_id'},
+        },
+        account = {
+            engine = 'memtx',
+            is_local = false,
+            temporary = false,
+            format = {
+                {name = 'account_id', is_nullable = false, type = 'unsigned'},
+                {name = 'customer_id', is_nullable = false, type = 'unsigned'},
+                {name = 'bucket_id', is_nullable = false, type = 'unsigned'},
+                {name = 'balance', is_nullable = false, type = 'string'},
+                {name = 'name', is_nullable = false, type = 'string'},
+            },
+            indexes = {{
+                name = 'account_id',
+                type = 'TREE',
+                unique = true,
+                parts = {
+                    {path = 'account_id', is_nullable = false, type = 'unsigned'}
+                }
+            }, {
+                name = 'customer_id',
+                type = 'TREE',
+                unique = false,
+                parts = {
+                    {path = 'customer_id', is_nullable = false, type = 'unsigned'}
+                }
+            }, {
+                name = 'bucket_id',
+                type = 'TREE',
+                unique = false,
+                parts = {
+                    {path = 'bucket_id', is_nullable = false, type = 'unsigned'}
+                }
+            }},
+            sharding_key = {'customer_id'},
         }
     }
 }
