@@ -849,6 +849,7 @@ local function check_space(space_name, space)
             )
         end
 
+        local used_names = {}
         for i, index in ipairs(space.indexes) do
             local ok, err = check_index(i, index, {
                 name = space_name,
@@ -860,16 +861,15 @@ local function check_space(space_name, space)
                 return nil, err
             end
 
-            if space_indexes[index.name] ~= nil then
+            if used_names[index.name] ~= nil then
                 return nil, string.format(
                     "space[%q].index[%d].name: this name %q already used in this space.indexes",
-                    space_name, i, index.name, space_name, space_indexes[index.name].id
+                    space_name, i, index.name, space_name, used_names[index.name]
                 )
             end
 
-            local index_info = table.deepcopy(index)
-            index_info.id = i
-            space_indexes[index.name] = index_info
+            used_names[index.name] = i
+            space_indexes[index.name] = index
         end
     end
 
