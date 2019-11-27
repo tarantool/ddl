@@ -105,18 +105,20 @@ local function assert_error_msg_contains(err_msg, expected, level)
     end
 end
 
+function g.test_empty_spaces_schema()
+    local res, err = ddl.set_schema({})
+    t.assert_not(err)
+    t.assert(res)
+end
+
 function g.test_invalid_schema()
     local res, err = ddl.set_schema(nil)
     t.assert_not(res)
     t.assert_str_icontains(err, 'Bad argument #1 to ddl.set_schema (schema expected, got nil)')
 
-    local res, err = ddl.set_schema({})
-    t.assert_not(res)
-    t.assert_str_icontains(err, 'Bad argument #1 to ddl.set_schema invalid schema.spaces (table expected, got nil)')
-
     local res, err = ddl.set_schema({spaces = 5})
     t.assert_not(res)
-    t.assert_str_icontains(err, 'Bad argument #1 to ddl.set_schema invalid schema.spaces (table expected, got number)')
+    t.assert_str_icontains(err, 'Bad argument #1 to ddl.set_schema invalid schema.spaces (optional table expected, got number)')
 
     local res, err = ddl.set_schema({spaces = {test_space.test}})
     t.assert_not(res)

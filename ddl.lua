@@ -12,8 +12,12 @@ local function check_schema_format(schema)
         return nil, err_msg .. ' (schema expected, got ' .. type(schema) .. ')'
     end
 
+    if schema.spaces == nil then
+        return true
+    end
+
     if type(schema.spaces) ~= 'table' then
-        return nil, err_msg ..' invalid schema.spaces (table expected, got ' ..
+        return nil, err_msg ..' invalid schema.spaces (optional table expected, got ' ..
             type(schema.spaces) .. ')'
     end
 
@@ -24,6 +28,10 @@ local function check_schema(schema)
     local ok, err = check_schema_format(schema)
     if not ok then
         return nil, string.format(err, 'check_schema')
+    end
+
+    if schema.spaces == nil then
+        return true
     end
 
     if type(box.cfg) == 'function' then
@@ -74,6 +82,10 @@ local function set_schema(schema)
     local ok, err = check_schema_format(schema)
     if not ok then
         return nil, string.format(err, 'set_schema')
+    end
+
+    if schema.spaces == nil then
+        return true
     end
 
     local ok, err = check_schema(schema)
