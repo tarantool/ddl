@@ -791,7 +791,7 @@ local function check_space(space_name, space)
         if type(space.temporary) ~= 'boolean' then
             return nil, string.format(
                 "space[%q]: bad argument 'temporary'" ..
-                " (string expected, got %s)",
+                " (boolean expected, got %s)",
                 space_name, type(space.temporary)
             )
         end

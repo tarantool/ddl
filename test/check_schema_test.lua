@@ -955,7 +955,7 @@ function g.test_invalid_space()
     space.is_local = true
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"]: bad argument 'temporary' (string expected, got nil)]])
+    t.assert_equals(err, [[space["space"]: bad argument 'temporary' (boolean expected, got nil)]])
 
 
     space.temporary = true
