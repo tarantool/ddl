@@ -1180,3 +1180,44 @@ function g.test_scalar_types()
     t.assert_equals(res, nil)
 
 end
+
+function g.test_ro_schema()
+    local mt_readonly = {
+        __newindex = function()
+            error('table is read-only', 2)
+        end
+    }
+
+    local function set_readonly(tbl, ro)
+        for _, v in pairs(tbl) do
+            if type(v) == 'table' then
+                set_readonly(v, ro)
+            end
+        end
+
+        if ro then
+            setmetatable(tbl, mt_readonly)
+        else
+            setmetatable(tbl, nil)
+        end
+
+        return tbl
+    end
+
+    local space = table.deepcopy(test_space)
+    space.indexes = table.deepcopy(test_indexes)
+
+    set_readonly(space, true)
+
+    t.assert_error_msg_contains(
+        'table is read-only',
+        function()
+            local space = table.deepcopy(space)
+            space.additional_info = 'hi'
+        end
+    )
+
+    local res, err = ddl_check.check_space('space', space)
+    t.assert_not(err)
+    t.assert(res)
+end
