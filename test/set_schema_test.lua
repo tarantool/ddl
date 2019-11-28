@@ -120,7 +120,7 @@ function g.test_invalid_schema()
     t.assert_not(res)
     t.assert_str_icontains(err,
         'Bad argument #1 to ddl.set_schema invalid schema.spaces' ..
-        ' (optional table expected, got number)'
+        ' (?table expected, got number)'
     )
 
     local res, err = ddl.set_schema({spaces = {test_space.test}})

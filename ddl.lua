@@ -12,13 +12,14 @@ local function check_schema_format(schema)
         return nil, err_msg .. ' (schema expected, got ' .. type(schema) .. ')'
     end
 
-    if schema.spaces == nil then
-        return true
+    local spaces = schema.spaces
+    if spaces == nil then
+        spaces = {}
     end
 
-    if type(schema.spaces) ~= 'table' then
-        return nil, err_msg ..' invalid schema.spaces (optional table expected, got ' ..
-            type(schema.spaces) .. ')'
+    if type(spaces) ~= 'table' then
+        return nil, err_msg ..' invalid schema.spaces (?table expected, got ' ..
+            type(spaces) .. ')'
     end
 
     return true
@@ -30,8 +31,9 @@ local function check_schema(schema)
         return nil, string.format(err, 'check_schema')
     end
 
-    if schema.spaces == nil then
-        return true
+    local spaces = schema.spaces
+    if spaces == nil then
+        spaces = {}
     end
 
     if type(box.cfg) == 'function' then
@@ -42,7 +44,7 @@ local function check_schema(schema)
         return nil, "Box is read only"
     end
 
-    for space_name, space_schema in pairs(schema.spaces) do
+    for space_name, space_schema in pairs(spaces) do
         local ok, err = ddl_check.check_space(space_name, space_schema)
         if not ok then
             return nil, err
@@ -84,8 +86,9 @@ local function set_schema(schema)
         return nil, string.format(err, 'set_schema')
     end
 
-    if schema.spaces == nil then
-        return true
+    local spaces = schema.spaces
+    if spaces == nil then
+        spaces = {}
     end
 
     local ok, err = check_schema(schema)
@@ -109,7 +112,7 @@ local function set_schema(schema)
         }
     )
 
-    for space_name, space_schema in pairs(schema.spaces) do
+    for space_name, space_schema in pairs(spaces) do
         if box.space[space_name] == nil then
             ddl_set.create_space(space_name, space_schema)
         end
