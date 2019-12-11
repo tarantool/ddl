@@ -75,7 +75,6 @@ end
 local function normalize_rows(rows)
     local normalized = {}
     for _, row in ipairs(rows) do
-        require('log').info(row)
         table.insert(normalized, row:totable())
     end
     return normalized

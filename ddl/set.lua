@@ -89,7 +89,6 @@ local function create_space(space_name, space_schema, opts)
 
     if not is_dummy then
         local ok, err = pcall(create_sharding_key, space_name, space_schema)
-        require('log').info(err)
         if not ok then
             return nil, string.format("space[%q].sharding_key: %s", space_name, err)
         end
