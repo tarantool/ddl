@@ -53,8 +53,6 @@ local test_space = init_test_data()
 local function _test_index(indexes_ddl, error_expected)
     db.drop_all()
 
-    log.info(require('tarantool').version)
-
     local spaces = table.deepcopy(test_space)
     spaces.test.indexes = indexes_ddl
     local schema = {spaces = spaces}
@@ -151,7 +149,6 @@ function g.test_hash_index()
         },
     }
 
-    log.info(require('tarantool').version)
     _test_index({pk, {
         type = 'HASH',
         unique = true,
