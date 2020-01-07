@@ -52,6 +52,8 @@ local function check_field(i, field, space)
             array     = true,
             map       = true,
             any       = true,
+            decimal   = true,
+            double    = true,
         }
 
         if known_field_types[field.type] == nil then
