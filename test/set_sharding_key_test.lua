@@ -128,7 +128,7 @@ function g.test_invalid_format()
 
     t.assert_equals(ok, nil)
     t.assert_str_icontains(err,
-        [[space["space"].indexes: sharding_key exists in space, but there is ]] ..
+        [[spaces["space"].indexes: sharding_key exists in space, but there is ]] ..
         [[no bucket_id in indexes]]
     )
 
