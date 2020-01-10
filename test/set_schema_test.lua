@@ -112,25 +112,32 @@ end
 function g.test_invalid_schema()
     local res, err = ddl.set_schema(nil)
     t.assert_not(res)
-    t.assert_str_icontains(err, 'Bad argument #1 to ddl.set_schema (schema expected, got nil)')
+    t.assert_equals(err, 'Invalid schema (table expected, got nil)')
+
+    local res, err = ddl.set_schema(box.NULL)
+    t.assert_not(res)
+    t.assert_equals(err, 'Invalid schema (table expected, got cdata)')
+
+    local res, err = ddl.set_schema(true)
+    t.assert_not(res)
+    t.assert_equals(err, 'Invalid schema (table expected, got boolean)')
 
     local res, err = ddl.set_schema({spaces = 5})
     t.assert_not(res)
-    t.assert_str_icontains(err,
-        'Bad argument #1 to ddl.set_schema invalid schema.spaces' ..
-        ' (?table expected, got number)'
+    t.assert_equals(err,
+        'spaces: must be a table, got number'
     )
 
-    local res, err = ddl.set_schema({spaces = {test_space.test}})
+    local res, err = ddl.set_schema({spaces = {[1] = test_space.test}})
     t.assert_not(res)
-    t.assert_str_icontains(err,
-        'space["1"]: invaliad space_name type (expected string, got number)'
+    t.assert_equals(err,
+        'spaces[1]: invaliad space_name (string expected, got number)'
     )
 
     local res, err = ddl.set_schema({spaces = {space = 5}})
     t.assert_not(res)
-    t.assert_str_icontains(err,
-        'space[space]: invaliad space type (expected table, got number)'
+    t.assert_equals(err,
+        'spaces["space"]: must be a table, got number'
     )
 end
 
@@ -193,7 +200,7 @@ function g.test_hash_index()
             },
         },
     }},
-        [[space["test"].indexes["secondary"]: HASH index must be unique]]
+        [[spaces["test"].indexes["secondary"]: HASH index must be unique]]
     )
 
     _test_index({pk, {
@@ -209,8 +216,8 @@ function g.test_hash_index()
             },
         },
     }},
-        [[space["test"].indexes["secondary"].part[1]: "HASH" index type]] ..
-        [[ doesn't support nullable field]]
+        [[spaces["test"].indexes["secondary"].parts[1]: HASH index type]] ..
+        [[ doesn't support nullable fields]]
     )
 end
 
@@ -373,7 +380,7 @@ function g.test_bitset_index()
             }
         }
     }},
-        [[space["test"].indexes["secondary"].part[1]: "BITSET" index ]] ..
+        [[space["test"].indexes["secondary"].part[1]: BITSET index ]] ..
         [[type doesn't support nullable field]]
     )
 
@@ -394,7 +401,7 @@ function g.test_bitset_index()
             }
         }
     }},
-        [[space["test"].indexes["secondary"].parts: "BITSET" index type doesn't ]] ..
+        [[space["test"].indexes["secondary"].parts: BITSET index type doesn't ]] ..
         [[support multipart keys, actually it contains 2 parts]]
     )
 end
