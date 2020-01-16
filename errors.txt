@@ -1,0 +1,207 @@
+------ check.lua
+
+-- check field
+    "spaces[%q]: bad argument fields[%d] " .. "(table expected, got %s)"
+
+    "spaces[%q].fields[%d]: bad argument name" .. " (string expected, got %s)"
+
+    "spaces[%q].fields[%q]: bad argument is_nullable" .. " (boolean expected, got %s)"
+
+    "spaces[%q].fields[%q]: bad argument type" .. " (string expected, got %s)",
+
+    "spaces[%q].fields[%q]: unknown type %q",
+
+    "spaces[%q].fields[%q]: varbinary type isn't allowed in your Tarantool version (%s)",
+
+    "spaces[%q].fields[%q]: redundant argument %q",
+
+
+-- check index_part
+
+    "bad argument path" .. " (string expecetd, got %s)",
+
+    "path (%s) referencing to unknown field",
+
+    "path (%s) is json_path, but your Tarantool version (%s) doesn't support this",
+
+    "path (%s) is multikey_path, but your Tarantool version (%s) doesn't support this",
+
+    "path (%s) is multikey, but index type %s doesn't allow multikeys",
+
+-- check_index_part_type
+
+    "bad argument type (string expected, got %s)",
+
+    "unknown type %q",
+
+    "varbinary type isn't allowed in your Tarantool version (%s)",
+
+    "%s field type is unsupported in %s index type"
+
+
+-- check_index_part_collation
+
+    "bad argument collation, (?string expected, got %s)",
+
+    "unknown collation %q"
+
+
+-- check_index_part
+
+    "spaces[%q].indexes[%q]: bad argument parts[%d]" .. " (table expected, got %s)",
+
+    "spaces[%q].indexes[%q].parts[%d].path: %s",
+
+    "spaces[%q].indexes[%q].parts[%d].type: %s",
+
+    "spaces[%q].indexes[%q].parts[%d].type: type differs" ..
+    " from spaces[%q].format.field[%q] (%s expected, got %s)",
+
+    "spaces[%q].indexes[%q].parts[%d].collation: %s",
+
+    "spaces[%q].indexes[%q].parts[%d].collation: type %s doesn't allow collation (only string type)",
+
+    "spaces[%q].indexes[%q].parts[%d].is_nullable: bad " ..
+    "argument is_nullable (boolean expected, got %s)",
+
+    "spaces[%q].indexes[%q].parts[%d].is_nullable: has different nullability with " ..
+    "spaces[%q].foramat.field[%q] (%s expected, got %s)",
+
+    "spaces[%q].indexes[%q].parts[%d]: redundant argument %q",
+
+-- check_index_parts
+
+    "spaces[%q].indexes[%q]: bad argument parts" .. " (contiguous array of tables expected, got %s)",
+
+    "spaces[%q].indexes[%q].parts[%d]: " .. "field %q has been indexed already by parts[%d]",
+
+-- check_index
+
+    "spaces[%q]: bad argument indexes[%d] " .. "(table expected, got %s)",
+
+    "spaces[%q].indexes[%d]: bad argument name" .. " (string expected, got %s)",
+
+    "spaces[%q].indexes[%q]: bad argument unique" .. " (boolean expected, got %s)",
+
+    "spaces[%q].indexes[%q]: bad argument type" .. " (string expected, got %s)",
+
+    "spaces[%q].indexes[%q]: unknown type %q",
+            
+    "spaces[%q].indexes[%q]: %s engine does not support index.type %s",
+
+    "spaces[%q].indexes[%q]: primary TREE index must be unique",
+
+    "spaces[%q].indexes[%q]: HASH index must be unique",
+
+    "spaces[%q].indexes[%q]: RTREE index can't be primary",
+
+    "spaces[%q].indexes[%q]: RTREE index can't be unique",
+
+    "spaces[%q].indexes[%q].dimension: bad argument dimension" .. " (number expected in range [1, 20], got %s)",
+
+    "spaces[%q].indexes[%q].dimension: bad argument dimension" .. " it must belong to range [1, 20], got %d",
+
+    "spaces[%q].indexes[%q].distance: bad argument distance" .. " (string expected, got %s)",
+
+    "spaces[%q].indexes[%q].distance: distance %q is unknown",
+
+    "spaces[%q].indexes[%q]: BITSET index can't be primary",
+
+    "spaces[%q].indexes[%q]: BITSET index can't be unique",
+
+    "spaces[%q].indexes[%q].parts: " .. "%s index type doesn't support multipart keys, " .. "actually it contains %d parts",
+
+    "spaces[%q].indexes[%q].parts[%d]: " .. "%s index type doesn't support nullable field",
+
+    "spaces[%q].indexes[%q].parts[%d].path: primary indexes" .. " doesn't allow multikey, actually path (%s) is multikey",
+
+    "spaces[%q].indexes[%q].parts[%d].path: primary indexes" .." can't contain nullable parts",
+
+    "spaces[%q].indexes[%q]: redutant argument %q",
+
+
+-- check_sharding_key
+
+    "spaces[%q].format[%q]: bucket_id used for sharding, " .. "but no sharding_key was supplied",
+
+    "spaces[%q].indexes[%q]: bucket_id used for sharding, " .. "but no sharding_key was supplied",
+
+    "spaces[%q].format: sharding_key exists in space, but there is" .. " no bucket_id in format",
+
+    [[spaces[%q].format["bucket_id"]: invalid field type (unsigned expected, got %s)]],
+
+    "spaces[%q].indexes: sharding_key exists in space, but there is" .. " no bucket_id in indexes"
+
+    "spaces[%q].indexes[%q]: bucket_id index can't be unique",
+
+    [[spaces[%q].indexes["bucket_id"]: incorrect parts size (1 expected, got %d)]],
+
+    [[spaces[%q].indexes["bucket_id"].parts[1].path: invalid field reference ]] .."(reference to bucket_id expected, got %s)",
+
+
+    "spaces[%q]: bad argument sharding_key (contiguous array expected, got %s)",
+
+    'spaces[%q].sharding_key: sharding_key contains duplicate %q',
+
+    "spaces[%q].sharding_key[%q]: key with %s part is unsupported yet",
+
+    "spaces[%q].sharding_key[%q]: invalid reference to format[%q], no such field",
+
+    "spaces[%q].sharding_key[%q]: key refereces to field " .. "with type %s, but it's unsupported yet"
+
+-- check space
+
+    'spaces[%s]: invalid space_name (string expected, got %s)',
+
+    'spaces[%q]: must be a table, got %s',
+
+    "spaces[%q]: bad argument engine" .. " (string expected, got %s)",
+
+    "spaces[%q]: unknown engine %q",
+
+    "spaces[%q]: bad argument is_local" .. " (boolean expected, got %s)",
+
+    "spaces[%q]: bad argument temporary" .. " (boolean expected, got %s)",
+
+    "spaces[%q]: vinyl engine doesn't support temporary spaces",
+
+    "spaces[%q]: bad argument format" .. " (contiguous array expected, got %s)",
+
+    "spaces[%q].format[%d].name: name %q already" .. " used in format of current space",
+
+    "spaces[%q]: bad argument indexes" .. " (contiguous array expected, got %s)",
+
+    "spaces[%q].indexes[%d].name: name %q already used in indexes of current space",
+
+    "spaces[%q]: redundant argument %q",
+    
+    
+--------- set.lua
+
+-- create_space
+
+"spaces[%q]: %s"
+
+'spaces[%q]: Index fields is nil'
+
+'spaces[%q].indexes[%q]: %s'
+
+"spaces[%q].sharding_key: %s"
+
+-------- ddl.lua
+
+-- check_schema_format
+
+'Invalid schema (table expected, got %s)'
+
+'spaces: must be a table, got %s'
+
+
+-- check_schema
+
+"Box isn't configured yet"
+
+"Box is read only"
+
+"Incompatible schema: spaces[%q]" .. " %s (expected %s, got %s)"
+
