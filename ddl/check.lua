@@ -192,6 +192,8 @@ local function check_index_part_type(part_type, index_type)
         array = true,
         boolean = true,
         varbinary = true,
+        decimal = true,
+        double = true,
     }
 
     if not known_part_types[part_type] then
@@ -285,6 +287,8 @@ local function check_index_part(i, index, space)
         number = true,
         boolean = true,
         varbinary = true,
+        double = true,
+        decimal = true,
     }
 
     do -- check index.part.type equals format.field.type
