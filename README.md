@@ -49,7 +49,8 @@ format = {
                     is_nullable = true | false,
                     type = 'unsigned' | 'string' | 'varbinary' |
                             'integer' | 'number' | 'boolean' |
-                            'array' | 'scalar' | 'any' | 'map'
+                            'array' | 'scalar' | 'any' | 'map' |
+                            'decimal' | 'double'
                 },
                 ...
             },
@@ -67,7 +68,8 @@ format = {
                             path = field_name.jsonpath,
                             -- may be multipath if '[*]' is used,
                             type = 'unsigned' | 'string' | 'varbinary' |
-                                'integer' | 'number' | 'boolean' | 'scalar',
+                                'integer' | 'number' | 'boolean' | 'scalar' |
+                                'decimal' | 'double',
                             is_nullable = true | false,
                             collation = nil | 'none' |
                                 'unicode' | 'unicode_ci' | '...',
