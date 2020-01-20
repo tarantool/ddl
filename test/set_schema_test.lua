@@ -1078,3 +1078,63 @@ function g.test_set_schema_sequently_ok()
     new_schema.spaces.test = old_schema.spaces.test
     t.assert_equals(res, new_schema)
 end
+
+function g.test_tarantool_2_3_types()
+    local spaces = table.deepcopy(test_space)
+    spaces.test.format = {
+        {name = 'scalar_nonnull', type = 'scalar', is_nullable = false},
+        {name = 'scalar_nullable', type = 'scalar', is_nullable = true},
+        {name = 'decimal_nonnull', type = 'decimal', is_nullable = false},
+        {name = 'decimal_null', type = 'decimal', is_nullable = true},
+        {name = 'double_nonnull', type = 'double', is_nullable = false},
+        {name = 'double_null', type = 'double', is_nullable = true},
+    }
+
+    local schema = {spaces = spaces}
+
+    local ok_primary = {
+        name = 'primary',
+        type = 'TREE',
+        unique = true,
+        parts = {
+            {is_nullable = false, path = 'decimal_nonnull', type = 'scalar'},
+            {is_nullable = false, path = 'double_nonnull', type = 'scalar'},
+            {is_nullable = false, path = 'scalar_nonnull', type = 'double'},
+        }
+    }
+
+    schema.spaces.test.indexes = {ok_primary}
+    local ok, err = ddl.set_schema(schema)
+
+    if not db.v(2, 3) then
+        t.assert_equals(ok, nil)
+        t.assert_equals(err,
+            [[space["test"]: Failed to create space 'test':]] ..
+            [[ field 3 has unknown field type]]
+        )
+        t.success()
+    end
+
+
+    t.assert_equals(err, nil)
+    t.assert_equals(ok, true)
+
+    local err_primary = {
+        name = 'primary',
+        type = 'TREE',
+        unique = true,
+        parts = {
+            {is_nullable = false, path = 'decimal_nonnull', type = 'double'},
+            {is_nullable = false, path = 'double_nonnull', type = 'scalar'},
+            {is_nullable = false, path = 'scalar_nonnull', type = 'double'},
+        }
+    }
+
+    schema.spaces.test.indexes = {err_primary}
+    local ok, err = ddl.set_schema(schema)
+    t.assert_equals(ok, nil)
+    t.assert_equals(err,
+        'space["test"].indexes["primary"].parts[1].type: type differs from' ..
+        ' space.format.field["decimal_nonnull"] (expected decimal, got double)'
+    )
+end

@@ -31,6 +31,11 @@ local test_space = {
         {name = 'map_nullable', type = 'map', is_nullable = true},
         {name = 'any_nonnull', type = 'any', is_nullable = false},
         {name = 'any_nullable', type = 'any', is_nullable = true},
+        ---------------------------------------------------------
+        {name = 'decimal_nonnull', type = 'decimal', is_nullable = false},
+        {name = 'decimal_null', type = 'decimal', is_nullable = true},
+        {name = 'double_nonnull', type = 'double', is_nullable = false},
+        {name = 'double_null', type = 'double', is_nullable = true},
     },
 }
 
@@ -1145,6 +1150,36 @@ function g.test_scalar_types()
     t.assert_equals(err, nil)
     t.assert_equals(res, true)
 
+    local index = {
+        name = 'pk',
+        type = 'TREE',
+        parts = {
+            -- shuffling decimal <-> scalar in an index is valid
+            {path = 'scalar_nonnull', type = 'decimal', is_nullable = false},
+            {path = 'decimal_nonnull', type = 'scalar', is_nullable = false},
+            {path = 'double_nonnull', type = 'scalar', is_nullable = false},
+        },
+        unique = true,
+    }
+    local res, err = ddl_check.check_space('space', get_test_space(index))
+    t.assert_equals(err, nil)
+    t.assert_equals(res, true)
+
+    local index = {
+        name = 'pk',
+        type = 'TREE',
+        parts = {
+            -- shuffling decimal <-> scalar in an index is valid
+            {path = 'scalar_nonnull', type = 'double', is_nullable = false},
+            {path = 'decimal_nonnull', type = 'scalar', is_nullable = false},
+            {path = 'double_nonnull', type = 'scalar', is_nullable = false},
+        },
+        unique = true,
+    }
+    local res, err = ddl_check.check_space('space', get_test_space(index))
+    t.assert_equals(err, nil)
+    t.assert_equals(res, true)
+
     --------------------------------------------------------------------
 
     local index = {
@@ -1159,6 +1194,22 @@ function g.test_scalar_types()
     t.assert_equals(err,
         [[space["space"].indexes["pk"].parts[1].type: type differs from ]] ..
         [[space.format.field["integer_nonnull"] (expected integer, got string)]]
+    )
+    t.assert_equals(res, nil)
+
+
+    local index = {
+        name = 'pk',
+        type = 'TREE',
+        parts = {
+            {path = 'decimal_nonnull', type = 'double', is_nullable = false},
+        },
+        unique = true,
+    }
+    local res, err = ddl_check.check_space('space', get_test_space(index))
+    t.assert_equals(err,
+        [[space["space"].indexes["pk"].parts[1].type: type differs from ]] ..
+        [[space.format.field["decimal_nonnull"] (expected decimal, got double)]]
     )
     t.assert_equals(res, nil)
 
