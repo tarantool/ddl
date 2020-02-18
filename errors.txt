@@ -1,13 +1,13 @@
 ------ check.lua
 
 -- check_field
-    "spaces[%q].format[%d]: invalid type" .. " (table expected, got %s)"
+    "spaces[%q].format[%d]: bad value" .. " (table expected, got %s)"
 
-    "spaces[%q].format[%d].name: invalid type" .. " (string expected, got %s)"
+    "spaces[%q].format[%d].name: bad value" .. " (string expected, got %s)"
 
-    "spaces[%q].format[%q].is_nullable: invalid type" .. " (boolean expected, got %s)"
+    "spaces[%q].format[%q].is_nullable: bad value" .. " (boolean expected, got %s)"
 
-    "spaces[%q].format[%q].type: invalid type" .. " (string expected, got %s)",
+    "spaces[%q].format[%q].type: bad value" .. " (string expected, got %s)",
 
     "spaces[%q].format[%q].type: unknown type %q",
 
@@ -18,7 +18,7 @@
 
 -- check_index_part_path
 
-    "invalid type" .. " (string expected, got %s)",
+    "bad value" .. " (string expected, got %s)",
 
     "path (%s) referencing to unknown field",
 
@@ -30,7 +30,7 @@
 
 -- check_index_part_type
 
-    "invalid type (string expected, got %s)",
+    "bad value (string expected, got %s)",
 
     "unknown type %q",
 
@@ -41,14 +41,14 @@
 
 -- check_index_part_collation
 
-    "invalid type (?string expected, got %s)",
+    "bad value (?string expected, got %s)",
 
     "unknown collation %q"
 
 
 -- check_index_part
 
-    "spaces[%q].indexes[%q].parts[%q]: invalid type" .. " (table expected, got %s)",
+    "spaces[%q].indexes[%q].parts[%q]: bad value" .. " (table expected, got %s)",
 
     "spaces[%q].indexes[%q].parts[%d].path: %s",
 
@@ -61,7 +61,7 @@
 
     "spaces[%q].indexes[%q].parts[%d].collation: type %s doesn't allow collation (only string type does)",
 
-    "spaces[%q].indexes[%q].parts[%d].is_nullable: invalid type (boolean expected, got %s)",
+    "spaces[%q].indexes[%q].parts[%d].is_nullable: bad value (boolean expected, got %s)",
 
     "spaces[%q].indexes[%q].parts[%d].is_nullable: has different nullability with " ..
     "spaces[%q].format[%q].is_nullable (%s expected, got %s)",
@@ -70,19 +70,19 @@
 
 -- check_index_parts
 
-    "spaces[%q].indexes[%q].parts: invalid type" .. " (contiguous array of tables expected, got %s)",
+    "spaces[%q].indexes[%q].parts: bad value" .. " (contiguous array of tables expected, got %s)",
 
     "spaces[%q].indexes[%q].parts[%d]: " .. "field %q is already indexed in parts[%d]",
 
 -- check_index
 
-    "spaces[%q].indexes[%d]: invalid type " .. "(table expected, got %s)",
+    "spaces[%q].indexes[%d]: bad value " .. "(table expected, got %s)",
 
-    "spaces[%q].indexes[%d].name: invalid type" .. " (string expected, got %s)",
+    "spaces[%q].indexes[%d].name: bad value" .. " (string expected, got %s)",
 
-    "spaces[%q].indexes[%q].unique: invalid type" .. " (boolean expected, got %s)",
+    "spaces[%q].indexes[%q].unique: bad value" .. " (boolean expected, got %s)",
 
-    "spaces[%q].indexes[%q].type: invalid type" .. " (string expected, got %s)",
+    "spaces[%q].indexes[%q].type: bad value" .. " (string expected, got %s)",
 
     "spaces[%q].indexes[%q].type: unknown type %q",
 
@@ -96,11 +96,11 @@
 
     "spaces[%q].indexes[%q]: RTREE index can't be unique",
 
-    "spaces[%q].indexes[%q].dimension: invalid type" .. " (number in range [1, 20] expected, got %s)",
+    "spaces[%q].indexes[%q].dimension: bad value" .. " (number in range [1, 20] expected, got %s)",
 
     "spaces[%q].indexes[%q].dimension: incorrect value" .. " (must be in range [1, 20], got %d)",
 
-    "spaces[%q].indexes[%q].distance: invalid type" .. " (string expected, got %s)",
+    "spaces[%q].indexes[%q].distance: bad value" .. " (string expected, got %s)",
 
     "spaces[%q].indexes[%q].distance: unknown distance %q",
 
@@ -127,7 +127,7 @@
 
     "spaces[%q].format: sharding_key exists in the space, but there's" .. " no bucket_id defined in 'format' section",
 
-    [[spaces[%q].format["bucket_id"].type: invalid type (unsigned expected, got %s)]],
+    [[spaces[%q].format["bucket_id"].type: bad value (unsigned expected, got %s)]],
 
     "spaces[%q].indexes: sharding_key exists in the space, but there's" .. " no bucket_id defined in 'indexes' section",
 
@@ -138,7 +138,7 @@
     [[spaces[%q].indexes["bucket_id"].parts[1].path: invalid field reference ]] .."(reference to bucket_id expected, got %s)",
 
 
-    "spaces[%q].sharding_key: invalid type (contiguous array expected, got %s)",
+    "spaces[%q].sharding_key: bad value (contiguous array expected, got %s)",
 
     'spaces[%q].sharding_key: sharding key contains duplicate %q',
 
@@ -152,23 +152,23 @@
 
     'spaces[%s]: invalid space name (string expected, got %s)',
 
-    'spaces[%q]: invalid type (table expected, got %s)',
+    'spaces[%q]: bad value (table expected, got %s)',
 
-    "spaces[%q].engine: invalid type" .. " (string expected, got %s)",
+    "spaces[%q].engine: bad value" .. " (string expected, got %s)",
 
     "spaces[%q].engine: unknown engine %q",
 
-    "spaces[%q].is_local: invalid type" .. " (boolean expected, got %s)",
+    "spaces[%q].is_local: bad value" .. " (boolean expected, got %s)",
 
-    "spaces[%q].temporary: invalid type" .. " (boolean expected, got %s)",
+    "spaces[%q].temporary: bad value" .. " (boolean expected, got %s)",
 
     "spaces[%q]: vinyl engine doesn't support temporary spaces",
 
-    "spaces[%q].format: invalid type" .. " (contiguous array expected, got %s)",
+    "spaces[%q].format: bad value" .. " (contiguous array expected, got %s)",
 
     "spaces[%q].format[%d].name: this space already has field with name %q",
 
-    "spaces[%q].indexes: invalid type" .. " (contiguous array expected, got %s)",
+    "spaces[%q].indexes: bad value" .. " (contiguous array expected, got %s)",
 
     "spaces[%q].indexes[%d].name: this space already has index with name %q",
 
