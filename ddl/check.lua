@@ -6,8 +6,8 @@ local db = require('ddl.db')
 local function check_field(i, field, space)
     if type(field) ~= 'table' then
         return nil, string.format(
-            "spaces[%q]: bad argument fields[%d] " ..
-            "(table expected, got %s)",
+            "spaces[%q].format[%d]: bad value" ..
+            " (table expected, got %s)",
             space.name, i, type(field)
         )
     end
@@ -15,7 +15,7 @@ local function check_field(i, field, space)
     do -- check field.name
         if type(field.name) ~= 'string' then
             return nil, string.format(
-                "spaces[%q].fields[%d]: bad argument name" ..
+                "spaces[%q].format[%d].name: bad value" ..
                 " (string expected, got %s)",
                 space.name, i, type(field.name)
             )
@@ -25,7 +25,7 @@ local function check_field(i, field, space)
     do -- check field.is_nullable
         if type(field.is_nullable) ~= 'boolean' then
             return nil, string.format(
-                "spaces[%q].fields[%q]: bad argument is_nullable" ..
+                "spaces[%q].format[%q].is_nullable: bad value" ..
                 " (boolean expected, got %s)",
                 space.name, field.name, type(field.is_nullable)
             )
@@ -35,8 +35,8 @@ local function check_field(i, field, space)
     do -- check field.type
         if type(field.type) ~= 'string' then
             return nil, string.format(
-                "spaces[%q].fields[%q]: bad argument type" ..
-                " (string expected, got %s)",
+                "spaces[%q].format[%q].type: bad value" ..
+                "(string expected, got %s)",
                 space.name, field.name, type(field.type)
             )
         end
@@ -56,14 +56,14 @@ local function check_field(i, field, space)
 
         if known_field_types[field.type] == nil then
             return nil, string.format(
-                "spaces[%q].fields[%q]: unknown type %q",
+                "spaces[%q].format[%q].type: unknown type %q",
                 space.name, field.name, field.type
             )
         end
 
         if not db.varbinary_allowed() and field.type == 'varbinary' then
             return nil, string.format(
-                "spaces[%q].fields[%q]: varbinary type isn't allowed in your Tarantool version (%s)",
+                "spaces[%q].format[%q].type: varbinary type isn't allowed in your Tarantool version (%s)",
                 space.name, field.name, _TARANTOOL
             )
         end
@@ -76,7 +76,7 @@ local function check_field(i, field, space)
         )
         if k ~= nil then
             return nil, string.format(
-                "spaces[%q].fields[%q]: redundant argument %q",
+                "spaces[%q].format[%q]: redundant key %q",
                 space.name, field.name, k
             )
         end
@@ -119,8 +119,7 @@ end
 local function check_index_part_path(path, index, space)
     if type(path) ~= 'string' then
         return nil, string.format(
-            "bad argument path" ..
-            " (string expecetd, got %s)",
+            "bad value (string expected, got %s)",
             type(path)
         )
     end
@@ -138,7 +137,7 @@ local function check_index_part_path(path, index, space)
     do -- check that json_path can be used
         if not db.json_path_allowed() and path_info.type == 'json' then
             return nil, string.format(
-                "path (%s) is json_path, but your Tarantool version (%s) doesn't support this",
+                "path (%s) is JSONPath, but your Tarantool version (%s) doesn't support this",
                 path, _TARANTOOL
             )
         end
@@ -155,14 +154,14 @@ local function check_index_part_path(path, index, space)
         if is_path_multikey(path) then
             if not db.multikey_path_allowed() then
                 return nil, string.format(
-                    "path (%s) is multikey_path, but your Tarantool version (%s) doesn't support this",
+                    "JSONPath (%s) has wildcard, but your Tarantool version (%s) doesn't support this",
                     path, _TARANTOOL
                 )
             end
 
             if not allow_multikey[index.type] then
                 return nil, string.format(
-                    "path (%s) is multikey, but index type %s doesn't allow multikeys",
+                    "JSONPath (%s) has wildcard, but index type %s doesn't allow this",
                     path, index.type
                 )
             end
@@ -176,7 +175,7 @@ end
 local function check_index_part_type(part_type, index_type)
     if type(part_type) ~= 'string' then
         return nil, string.format(
-            "bad argument type (string expected, got %s)",
+            "bad value (string expected, got %s)",
             type(part_type)
         )
     end
@@ -201,7 +200,7 @@ local function check_index_part_type(part_type, index_type)
 
     if not db.varbinary_allowed() and part_type == 'varbinary' then
        return nil, string.format(
-           "varbinary type isn't allowed in your Tarantool version (%s)",
+            "varbinary type isn't allowed in your Tarantool version (%s)",
            _TARANTOOL
         )
     end
@@ -230,7 +229,7 @@ local function check_index_part_collation(collation)
 
     if type(collation) ~= 'string' then
         return nil, string.format(
-            "bad argument collation, (?string expected, got %s)",
+            "bad value (?string expected, got %s)",
             type(collation)
         )
     end
@@ -246,7 +245,7 @@ local function check_index_part(i, index, space)
 
     if type(part) ~= 'table' then
         return nil, string.format(
-            "spaces[%q].indexes[%q]: bad argument parts[%d]" ..
+            "spaces[%q].indexes[%q].parts[%d]: bad value" ..
             " (table expected, got %s)",
             space.name, index.name, i, type(part)
         )
@@ -295,7 +294,7 @@ local function check_index_part(i, index, space)
                 if space_format_field.type ~= part.type then
                     return nil, string.format(
                         "spaces[%q].indexes[%q].parts[%d].type: type differs" ..
-                        " from spaces[%q].format.field[%q] (%s expected, got %s)",
+                        " from spaces[%q].format[%q].type (%s expected, got %s)",
                         space.name, index.name, i, space.name, path_info.field_name,
                         space_format_field.type, part.type
                     )
@@ -315,7 +314,7 @@ local function check_index_part(i, index, space)
             end
         elseif part.collation ~= nil then
             return nil, string.format(
-                "spaces[%q].indexes[%q].parts[%d].collation: type %s doesn't allow collation (only string type)",
+                "spaces[%q].indexes[%q].parts[%d].collation: type %s doesn't allow collation (only string type does)",
                 space.name, index.name, i, part.type
             )
         end
@@ -324,8 +323,8 @@ local function check_index_part(i, index, space)
     do -- check is_nullable has correct format
         if type(part.is_nullable) ~= 'boolean' then
             return nil, string.format(
-                "spaces[%q].indexes[%q].parts[%d].is_nullable: bad " ..
-                "argument is_nullable (boolean expected, got %s)",
+                "spaces[%q].indexes[%q].parts[%d].is_nullable: bad value" ..
+                " (boolean expected, got %s)",
                 space.name, index.name, i, type(part.is_nullable)
             )
         end
@@ -335,7 +334,7 @@ local function check_index_part(i, index, space)
         if space_format_field.is_nullable ~= part.is_nullable then
             return nil, string.format(
                 "spaces[%q].indexes[%q].parts[%d].is_nullable: has different nullability with " ..
-                "spaces[%q].foramat.field[%q] (%s expected, got %s)",
+                "spaces[%q].format[%q].is_nullable (%s expected, got %s)",
                 space.name, index.name, i, space.name, path_info.field_name,
                 space_format_field.is_nullable, part.is_nullable
             )
@@ -348,7 +347,7 @@ local function check_index_part(i, index, space)
         )
         if k ~= nil then
             return nil, string.format(
-                "spaces[%q].indexes[%q].parts[%d]: redundant argument %q",
+                "spaces[%q].indexes[%q].parts[%d]: redundant key %q",
                 space.name, index.name, i, k
             )
         end
@@ -360,7 +359,7 @@ end
 local function check_index_parts(index, space)
     if not utils.is_array(index.parts) then
         return nil, string.format(
-            "spaces[%q].indexes[%q]: bad argument parts" ..
+            "spaces[%q].indexes[%q].parts: bad value" ..
             " (contiguous array of tables expected, got %s)",
             space.name, index.name, type(index.parts)
         )
@@ -376,7 +375,7 @@ local function check_index_parts(index, space)
             if used_fields[part.path] ~= nil then
                 return nil, string.format(
                     "spaces[%q].indexes[%q].parts[%d]: " ..
-                    "field %q has been indexed already by parts[%d]",
+                    "field %q is already indexed in parts[%d]",
                     space.name, index.name, i, index.parts[i].path,
                     used_fields[part.path].id
                 )
@@ -391,7 +390,7 @@ end
 local function check_index(i, index, space)
     if type(index) ~= 'table' then
         return nil, string.format(
-            "spaces[%q]: bad argument indexes[%d] " ..
+            "spaces[%q].indexes[%d]: bad value " ..
             "(table expected, got %s)",
             space.name, i, type(index)
         )
@@ -400,7 +399,7 @@ local function check_index(i, index, space)
     do -- check index.name
         if type(index.name) ~= 'string' then
             return nil, string.format(
-                "spaces[%q].indexes[%d]: bad argument name" ..
+                "spaces[%q].indexes[%d].name: bad value" ..
                 " (string expected, got %s)",
                 space.name, i, type(index.name)
             )
@@ -410,7 +409,7 @@ local function check_index(i, index, space)
     do -- check index.unique
         if type(index.unique) ~= 'boolean' then
             return nil, string.format(
-                "spaces[%q].indexes[%q]: bad argument unique" ..
+                "spaces[%q].indexes[%q].unique: bad value" ..
                 " (boolean expected, got %s)",
                 space.name, index.name, type(index.unique)
             )
@@ -420,7 +419,7 @@ local function check_index(i, index, space)
     do -- check index.type
         if type(index.type) ~= 'string' then
             return nil, string.format(
-                "spaces[%q].indexes[%q]: bad argument type" ..
+                "spaces[%q].indexes[%q].type: bad value" ..
                 " (string expected, got %s)",
                 space.name, index.name, type(index.type)
             )
@@ -434,7 +433,7 @@ local function check_index(i, index, space)
         }
         if not known_index_types[index.type] then
             return nil, string.format(
-                "spaces[%q].indexes[%q]: unknown type %q",
+                "spaces[%q].indexes[%q].type: unknown type %q",
                 space.name, index.name, index.type
             )
         end
@@ -452,7 +451,7 @@ local function check_index(i, index, space)
         }
         if not engines_support[space.engine][index.type] then
             return nil, string.format(
-                "spaces[%q].indexes[%q]: %s engine does not support index.type %s",
+                "spaces[%q].indexes[%q]: %s engine doesn't support %s index type",
                 space.name, index.name, space.engine, index.type
             )
         end
@@ -491,23 +490,23 @@ local function check_index(i, index, space)
 
         if type(index.dimension) ~= 'number' then
             return nil, string.format(
-                "spaces[%q].indexes[%q].dimension: bad argument dimension" ..
-                " (number expected in range [1, 20], got %s)",
+                "spaces[%q].indexes[%q].dimension: bad value" ..
+                " (number in range [1, 20] expected, got %s)",
                 space.name, index.name, type(index.dimension)
             )
         end
 
         if index.dimension < 1 or index.dimension > 20 then
             return nil, string.format(
-                "spaces[%q].indexes[%q].dimension: bad argument dimension" ..
-                " it must belong to range [1, 20], got %d",
+                "spaces[%q].indexes[%q].dimension: incorrect value" ..
+                " (must be in range [1, 20], got %d)",
                 space.name, index.name, index.dimension
             )
         end
 
         if type(index.distance) ~= 'string' then
             return nil, string.format(
-                "spaces[%q].indexes[%q].distance: bad argument distance" ..
+                "spaces[%q].indexes[%q].distance: bad value" ..
                 " (string expected, got %s)",
                 space.name, index.name, type(index.distance)
             )
@@ -520,7 +519,7 @@ local function check_index(i, index, space)
 
         if not known_distances[index.distance] then
             return nil, string.format(
-                "spaces[%q].indexes[%q].distance: distance %q is unknown",
+                "spaces[%q].indexes[%q].distance: unknown distance %q",
                 space.name, index.name, index.distance
             )
         end
@@ -554,8 +553,8 @@ local function check_index(i, index, space)
             if #index.parts > 1 then
                 return nil, string.format(
                     "spaces[%q].indexes[%q].parts: " ..
-                    "%s index type doesn't support multipart keys, " ..
-                    "actually it contains %d parts",
+                    "index of %s type can't be composite " ..
+                    "(currently, index contains %d parts)",
                     space.name, index.name, index.type, #index.parts
                 )
             end
@@ -578,7 +577,7 @@ local function check_index(i, index, space)
             if idx ~= nil then
                 return nil, string.format(
                     "spaces[%q].indexes[%q].parts[%d]: " ..
-                    "%s index type doesn't support nullable field",
+                    "index of %s type doesn't support nullable fields",
                     space.name, index.name, idx, index.type
                 )
             end
@@ -590,8 +589,8 @@ local function check_index(i, index, space)
             for i, part in ipairs(index.parts) do
                 if is_path_multikey(part.path) then
                     return nil, string.format(
-                        "spaces[%q].indexes[%q].parts[%d].path: primary indexes" ..
-                        " doesn't allow multikey, actually path (%s) is multikey",
+                        "spaces[%q].indexes[%q].parts[%d].path: primary index" ..
+                        " doesn't allow JSONPath wildcard (path %s has wildcard)",
                         space.name, index.name, i, part.path
                     )
                 end
@@ -600,7 +599,7 @@ local function check_index(i, index, space)
             local idx = find_nullable_part(index.parts)
             if idx ~= nil then
                 return nil, string.format(
-                    "spaces[%q].indexes[%q].parts[%d].path: primary indexes" ..
+                    "spaces[%q].indexes[%q].parts[%d].is_nullable: primary index" ..
                     " can't contain nullable parts",
                     space.name, index.name, idx
                 )
@@ -616,7 +615,7 @@ local function check_index(i, index, space)
     local k = utils.redundant_key(index, keys)
     if k ~= nil then
         return nil, string.format(
-            "spaces[%q].indexes[%q]: redutant argument %q",
+            "spaces[%q].indexes[%q]: redundant key %q",
             space.name, index.name, k
         )
     end
@@ -628,17 +627,17 @@ local function check_sharding_key(space)
     if not space.sharding_key then
         if space.fields.bucket_id ~= nil then
             return nil, string.format(
-                "spaces[%q].format[%q]: bucket_id used for sharding, " ..
-                "but no sharding_key was supplied",
-                space.name, 'bucket_id'
+                "spaces[%q].format[%q]: bucket_id is used for sharding, " ..
+                "but there's no spaces[%q].sharding_key defined",
+                space.name, 'bucket_id', space.name
             )
         end
 
         if space.indexes.bucket_id ~= nil then
             return nil, string.format(
-                "spaces[%q].indexes[%q]: bucket_id used for sharding, " ..
-                "but no sharding_key was supplied",
-                space.name, 'bucket_id'
+                "spaces[%q].indexes[%q]: bucket_id is used for sharding, " ..
+                "but there's no spaces[%q].sharding_key defined",
+                space.name, 'bucket_id', space.name
             )
         end
         return true
@@ -647,16 +646,16 @@ local function check_sharding_key(space)
     do -- chek that format['bucket_id'] valid
         if not space.fields.bucket_id then
             return nil, string.format(
-                "spaces[%q].format: sharding_key exists in space, but there is" ..
-                " no bucket_id in format",
+                "spaces[%q].format: sharding_key exists in the space, but there's" ..
+                " no bucket_id defined in 'format' section",
                 space.name
             )
         end
 
         if space.fields.bucket_id.type ~= 'unsigned' then
             return nil, string.format(
-                [[spaces[%q].format["bucket_id"]: invalid field type (unsigned expected, got %s)]],
-                space.name, space.fields.bucket_id.type
+                "spaces[%q].format[%q].type: bad value (unsigned expected, got %s)",
+                space.name, 'bucket_id', space.fields.bucket_id.type
             )
         end
     end
@@ -664,30 +663,31 @@ local function check_sharding_key(space)
     do -- check that inedxes['bucket_id'] valid
         if not space.indexes.bucket_id then
             return nil, string.format(
-                "spaces[%q].indexes: sharding_key exists in space, but there is" ..
-                " no bucket_id in indexes", space.name
+                "spaces[%q].indexes: sharding_key exists in the space, but there's" ..
+                " no bucket_id defined in 'indexes' section",
+                space.name
             )
         end
 
         if space.indexes.bucket_id.unique then
             return nil, string.format(
-                "spaces[%q].indexes[%q]: bucket_id index can't be unique",
+                "spaces[%q].indexes[%q].unique: bucket_id index can't be unique",
                 space.name, 'bucket_id'
             )
         end
 
         if #space.indexes['bucket_id'].parts ~= 1 then
             return nil, string.format(
-                [[spaces[%q].indexes["bucket_id"]: incorrect parts size (1 expected, got %d)]],
-                space.name, #space.indexes['bucket_id'].parts
+                "spaces[%q].indexes[%q].parts: bucket_id index can't be composite (1 part expected, got %d parts)",
+                space.name, 'bucket_id', #space.indexes['bucket_id'].parts
             )
         end
 
         if space.indexes['bucket_id'].parts[1].path ~= 'bucket_id' then
             return nil, string.format(
-                [[spaces[%q].indexes["bucket_id"].parts[1].path: invalid field reference ]] ..
+                "spaces[%q].indexes[%q].parts[1].path: invalid field reference " ..
                 "(reference to bucket_id expected, got %s)",
-                space.name, space.indexes['bucket_id'].parts[1].path
+                space.name, 'bucket_id', space.indexes['bucket_id'].parts[1].path
             )
         end
     end
@@ -695,7 +695,7 @@ local function check_sharding_key(space)
     do -- check that sharding_key format is valid
         if not utils.is_array(space.sharding_key) then
             return nil, string.format(
-                "spaces[%q]: bad argument sharding_key (contiguous array expected, got %s)",
+                "spaces[%q].sharding_key: bad value (contiguous array expected, got %s)",
                 space.name, type(space.sharding_key)
             )
         end
@@ -704,7 +704,7 @@ local function check_sharding_key(space)
         for _, key in ipairs(space.sharding_key) do
             if duplicates[key] then
                 return nil, string.format(
-                    'spaces[%q].sharding_key: sharding_key contains duplicate %q',
+                    "spaces[%q].sharding_key: sharding key contains duplicate %q",
                     space.name, key
                 )
             end
@@ -717,8 +717,8 @@ local function check_sharding_key(space)
         local path = get_path_info(path_to_field)
         if path.type ~= 'regular' then
             return nil, string.format(
-                "spaces[%q].sharding_key[%q]: key with %s part is unsupported yet",
-                space.name, path_to_field, path.type
+                "spaces[%q].sharding_key[%q]: key containing JSONPath isn't supported yet",
+                space.name, path_to_field
             )
         end
 
@@ -732,8 +732,8 @@ local function check_sharding_key(space)
 
         if field.type == 'map' or field.type == 'array' then
             return nil, string.format(
-                "spaces[%q].sharding_key[%q]: key refereces to field " ..
-                "with type %s, but it's unsupported yet",
+                "spaces[%q].sharding_key[%q]: key references to field " ..
+                "with %s type, but it's not supported yet",
                 space.name, path_to_field, field.type
             )
         end
@@ -745,14 +745,14 @@ end
 local function check_space(space_name, space)
     if type(space_name) ~= 'string' then
         return nil, string.format(
-            'spaces[%s]: invalid space_name (string expected, got %s)',
+            "spaces[%s]: invalid space name (string expected, got %s)",
             space_name, type(space_name)
         )
     end
 
     if type(space) ~= 'table' then
         return nil, string.format(
-            'spaces[%q]: must be a table, got %s',
+            "spaces[%q]: bad value (table expected, got %s)",
             space_name, type(space)
         )
     end
@@ -760,7 +760,7 @@ local function check_space(space_name, space)
     do -- check space.engine
         if type(space.engine) ~= 'string' then
             return nil, string.format(
-                "spaces[%q]: bad argument engine" ..
+                "spaces[%q].engine: bad value" ..
                 " (string expected, got %s)",
                 space_name, type(space.engine)
             )
@@ -772,7 +772,7 @@ local function check_space(space_name, space)
         }
         if not known_engines[space.engine] then
             return nil, string.format(
-                "spaces[%q]: unknown engine %q",
+                "spaces[%q].engine: unknown engine %q",
                 space_name, space.engine
             )
         end
@@ -781,7 +781,7 @@ local function check_space(space_name, space)
     do -- check space.is_local
         if type(space.is_local) ~= 'boolean' then
             return nil, string.format(
-                "spaces[%q]: bad argument is_local" ..
+                "spaces[%q].is_local: bad value" ..
                 " (boolean expected, got %s)",
                 space_name, type(space.is_local)
             )
@@ -791,7 +791,7 @@ local function check_space(space_name, space)
     do -- check space.temporary
         if type(space.temporary) ~= 'boolean' then
             return nil, string.format(
-                "spaces[%q]: bad argument temporary" ..
+                "spaces[%q].temporary: bad value" ..
                 " (boolean expected, got %s)",
                 space_name, type(space.temporary)
             )
@@ -810,7 +810,7 @@ local function check_space(space_name, space)
     do -- check space.format
         if not utils.is_array(space.format) then
             return nil, string.format(
-                "spaces[%q]: bad argument format" ..
+                "spaces[%q].format: bad value" ..
                 " (contiguous array expected, got %s)",
                 space_name, type(space.format)
             )
@@ -825,8 +825,7 @@ local function check_space(space_name, space)
 
             if space_fields[field_params.name] ~= nil then
                 return nil, string.format(
-                    "spaces[%q].format[%d].name: name %q already" ..
-                    " used in format of current space",
+                    "spaces[%q].format[%d].name: this space already has field with name %q",
                     space_name, i, field_params.name
                 )
             end
@@ -844,7 +843,7 @@ local function check_space(space_name, space)
     do -- check indexes
         if not utils.is_array(space.indexes) then
             return nil, string.format(
-                "spaces[%q]: bad argument indexes" ..
+                "spaces[%q].indexes: bad value" ..
                 " (contiguous array expected, got %s)",
                 space_name, type(space.indexes)
             )
@@ -864,8 +863,8 @@ local function check_space(space_name, space)
 
             if used_names[index.name] ~= nil then
                 return nil, string.format(
-                    "spaces[%q].indexes[%d].name: name %q already used in indexes of current space",
-                    space_name, i, index.name, space_name, used_names[index.name]
+                    "spaces[%q].indexes[%d].name: this space already has index with name %q",
+                    space_name, i, index.name
                 )
             end
 
@@ -891,7 +890,7 @@ local function check_space(space_name, space)
     )
     if k ~= nil then
         return nil, string.format(
-            "spaces[%q]: redundant argument %q",
+            "spaces[%q]: redundant key %q",
             space_name, k
         )
     end

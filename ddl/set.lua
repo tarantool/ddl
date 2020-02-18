@@ -11,7 +11,7 @@ local function create_index(box_space, ddl_index)
     -- end
 
     if ddl_index.parts == nil then
-        error('index parts is nil')
+        error("index parts is nil")
     end
 
     local index_parts = {}
@@ -72,7 +72,7 @@ local function create_space(space_name, space_schema, opts)
 
     if space_schema.indexes == nil then
         error(
-            string.format('spaces[%q]: Index fields is nil', space_name), 0
+            string.format("spaces[%q]: 'indexes' section is missing (nil)", space_name), 0
         )
     end
 
@@ -81,7 +81,7 @@ local function create_space(space_name, space_schema, opts)
         local ok, data = pcall(create_index, box_space, index)
         if not ok then
             error(string.format(
-                'spaces[%q].indexes[%q]: %s',  space_name, index.name or i,
+                "spaces[%q].indexes[%q]: %s",  space_name, index.name or i,
                 data
             ), 0)
         end

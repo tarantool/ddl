@@ -9,7 +9,7 @@ local function check_schema_format(schema)
 
     if type(schema) ~= 'table' then
         return nil, string.format(
-            'Invalid schema (table expected, got %s)', type(schema)
+            "Invalid schema (table expected, got %s)", type(schema)
         )
     end
 
@@ -20,7 +20,7 @@ local function check_schema_format(schema)
 
     if type(spaces) ~= 'table' then
         return nil, string.format(
-            'spaces: must be a table, got %s', type(spaces)
+            "spaces: must be a table, got %s", type(spaces)
         )
     end
 
@@ -39,11 +39,11 @@ local function check_schema(schema)
     end
 
     if type(box.cfg) == 'function' then
-        return nil, "Box isn't configured yet"
+        return nil, "'box' module isn't configured yet"
     end
 
     if box.cfg.read_only then
-        return nil, "Box is read only"
+        return nil, "Instance is read-only (box.cfg.read_only=true)"
     end
 
     for space_name, space_schema in pairs(spaces) do
