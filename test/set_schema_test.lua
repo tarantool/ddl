@@ -131,13 +131,13 @@ function g.test_invalid_schema()
     local res, err = ddl.set_schema({spaces = {[1] = test_space.test}})
     t.assert_not(res)
     t.assert_equals(err,
-        'spaces[1]: invalid space_name (string expected, got number)'
+        'spaces[1]: invalid space name (string expected, got number)'
     )
 
     local res, err = ddl.set_schema({spaces = {space = 5}})
     t.assert_not(res)
     t.assert_equals(err,
-        'spaces["space"]: must be a table, got number'
+        'spaces["space"]: bad value (table expected, got number)'
     )
 end
 
@@ -216,8 +216,8 @@ function g.test_hash_index()
             },
         },
     }},
-        [[spaces["test"].indexes["secondary"].parts[1]: HASH index type]] ..
-        [[ doesn't support nullable field]]
+        [[spaces["test"].indexes["secondary"].parts[1]: index of HASH type]] ..
+        [[ doesn't support nullable fields]]
     )
 end
 
@@ -380,8 +380,8 @@ function g.test_bitset_index()
             }
         }
     }},
-        [[spaces["test"].indexes["secondary"].parts[1]: BITSET index ]] ..
-        [[type doesn't support nullable field]]
+        [[spaces["test"].indexes["secondary"].parts[1]: index of ]] ..
+        [[BITSET type doesn't support nullable fields]]
     )
 
     _test_index({pk, {
@@ -401,8 +401,8 @@ function g.test_bitset_index()
             }
         }
     }},
-        [[spaces["test"].indexes["secondary"].parts: BITSET index type doesn't ]] ..
-        [[support multipart keys, actually it contains 2 parts]]
+        [[spaces["test"].indexes["secondary"].parts: index of BITSET type can't ]] ..
+        [[be composite (currently, index contains 2 parts)]]
     )
 end
 
@@ -444,8 +444,8 @@ function g.test_rtree_index()
             is_nullable = true,
         }}
     }},
-        [[spaces["test"].indexes["secondary"].parts[1]: RTREE ]] ..
-        [[index type doesn't support nullable field]]
+        [[spaces["test"].indexes["secondary"].parts[1]: index ]] ..
+        [[of RTREE type doesn't support nullable fields]]
     )
 
     _test_index({pk, {
@@ -460,7 +460,7 @@ function g.test_rtree_index()
             is_nullable = false,
         }}
     }},
-        [[spaces["test"].indexes["secondary"].distance: distance "not_existing" is unknown]]
+        [[spaces["test"].indexes["secondary"].distance: unknown distance "not_existing"]]
     )
 
     _test_index({pk, {
@@ -475,8 +475,8 @@ function g.test_rtree_index()
             is_nullable = false,
         }}
     }},
-        [[spaces["test"].indexes["secondary"].dimension: bad argument dimension]] ..
-        [[ it must belong to range [1, 20], got -9]]
+        [[spaces["test"].indexes["secondary"].dimension: incorrect value]] ..
+        [[ (must be in range [1, 20], got -9)]]
     )
 
     _test_index({pk, {
@@ -512,8 +512,8 @@ function g.test_rtree_index()
             is_nullable = true,
         }}
     }},
-        [[spaces["test"].indexes["secondary"].parts: RTREE index type doesn't]] ..
-        [[ support multipart keys, actually it contains 2 parts]]
+        [[spaces["test"].indexes["secondary"].parts: index of RTREE type can't]] ..
+        [[ be composite (currently, index contains 2 parts)]]
     )
 end
 
@@ -548,7 +548,7 @@ function g.test_path()
             }},
             string.format(
                 [[spaces["test"].indexes["secondary"].parts[1].path: path ]] ..
-                [[(map_nonnull.DATA["name"]) is json_path, but your Tarantool ]] ..
+                [[(map_nonnull.DATA["name"]) is JSONPath, but your Tarantool ]] ..
                 [[version (%s) doesn't support this]],
                 _TARANTOOL
             )
@@ -654,7 +654,7 @@ function g.test_multikey_path()
             {pk, multikey_index},
             string.format(
                 [[spaces["test"].indexes["secondary"].parts[1].path:]] ..
-                [[ path (array_nonnull[*].path) is multikey_path,]] ..
+                [[ JSONPath (array_nonnull[*].path) has wildcard,]] ..
                 [[ but your Tarantool version (%s) doesn't support this]],
                 _TARANTOOL
             )
@@ -728,8 +728,8 @@ function g.test_multikey_path()
                 },
             },
         }},
-        [[spaces["test"].indexes["secondary"].parts[1].path: path (map_nonnull.data[*].path) ]] ..
-        [[is multikey, but index type BITSET doesn't allow multikeys]]
+        [[spaces["test"].indexes["secondary"].parts[1].path: JSONPath ]] ..
+        [[(map_nonnull.data[*].path) has wildcard, but index type BITSET doesn't allow this]]
     )
 
     _test_index({
@@ -747,8 +747,8 @@ function g.test_multikey_path()
                 },
             },
         }},
-        [[spaces["test"].indexes["secondary"].parts[1].path: path (map_nonnull.data[*].path)]] ..
-        [[ is multikey, but index type HASH doesn't allow multikeys]]
+        [[spaces["test"].indexes["secondary"].parts[1].path: JSONPath ]] ..
+        [[(map_nonnull.data[*].path) has wildcard, but index type HASH doesn't allow this]]
     )
 
     _test_index({
@@ -767,8 +767,8 @@ function g.test_multikey_path()
                 },
             },
         }},
-        [[spaces["test"].indexes["secondary"].parts[1].path: path (map_nonnull.data[*].path)]] ..
-        [[ is multikey, but index type RTREE doesn't allow multikeys]]
+        [[spaces["test"].indexes["secondary"].parts[1].path: JSONPath ]] ..
+        [[(map_nonnull.data[*].path) has wildcard, but index type RTREE doesn't allow this]]
     )
 end
 
@@ -779,7 +779,7 @@ function g.test_invalid_type_in_format()
     local res, err = ddl.set_schema(schema)
     t.assert_not(res)
     assert_error_msg_contains(err,
-        'spaces["test"].fields["unsigned_nonnull"]: unknown type "undefined"'
+        'spaces["test"].format["unsigned_nonnull"].type: unknown type "undefined"'
     )
 end
 
@@ -813,7 +813,7 @@ function g.test_invalid_index_type()
             name = 'primary',
             parts = {{path = 'unsigned_nonnull', type = 'unsigned', is_nullable = false}}
         }},
-        'spaces["test"].indexes["primary"]: unknown type "BTREE"'
+        'spaces["test"].indexes["primary"].type: unknown type "BTREE"'
     )
 end
 
@@ -835,8 +835,8 @@ function g.test_primary_key_error()
             name = 'primary',
             parts = {{path = 'unsigned_nullable', type = 'unsigned', is_nullable = true}}
         }},
-        [[spaces["test"].indexes["primary"].parts[1].path: primary ]] ..
-        [[indexes can't contain nullable parts]]
+        [[spaces["test"].indexes["primary"].parts[1].is_nullable: primary ]] ..
+        [[index can't contain nullable parts]]
     )
 
 
@@ -848,8 +848,8 @@ function g.test_primary_key_error()
                 name = 'primary',
                 parts = {{path = 'map_nonnull.data[*]', type = 'unsigned', is_nullable = false}}
             }},
-            [[spaces["test"].indexes["primary"].parts[1].path: primary indexes doesn't allow multikey,]] ..
-            [[ actually path (map_nonnull.data[*]) is multikey]]
+            [[spaces["test"].indexes["primary"].parts[1].path: primary index doesn't allow]] ..
+            [[ JSONPath wildcard (path map_nonnull.data[*] has wildcard)]]
         )
     end
 end
@@ -867,7 +867,7 @@ function g.test_missing_ddl_index_parts()
     local res, err =  ddl.set_schema(schema)
     t.assert_not(res)
     assert_error_msg_contains(err,
-        [[spaces["test"].indexes["primary"]: bad argument parts ]] ..
+        [[spaces["test"].indexes["primary"].parts: bad value ]] ..
         [[(contiguous array of tables expected, got nil)]]
     )
 end
@@ -886,7 +886,7 @@ function g.test_missing_format()
     local res, err =  ddl.set_schema(schema)
     t.assert_not(res)
     assert_error_msg_contains(err,
-        [[spaces["test"]: bad argument format (contiguous array expected, got nil)]]
+        [[spaces["test"].format: bad value (contiguous array expected, got nil)]]
     )
 end
 
@@ -898,7 +898,7 @@ function g.test_missing_indexes()
     local res, err =  ddl.set_schema(schema)
     t.assert_not(res)
     assert_error_msg_contains(err,
-        [[spaces["test"]: bad argument indexes (contiguous array expected, got nil)]]
+        [[spaces["test"].indexes: bad value (contiguous array expected, got nil)]]
     )
 end
 
@@ -1033,7 +1033,7 @@ function g.test_set_schema_sequently_err()
     t.assert_not(res)
     assert_error_msg_contains(err,
         'spaces["space2"].indexes["primary"].parts[1].type: type differs from ' ..
-        'spaces["space2"].format.field["unsigned_nonnull"] (unsigned expected, got string)'
+        'spaces["space2"].format["unsigned_nonnull"].type (unsigned expected, got string)'
     )
 
     local res = ddl.get_schema()

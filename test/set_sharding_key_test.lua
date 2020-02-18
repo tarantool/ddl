@@ -127,9 +127,9 @@ function g.test_invalid_format()
     local ok, err = ddl.set_schema(g.schema)
 
     t.assert_equals(ok, nil)
-    t.assert_str_icontains(err,
-        [[spaces["space"].indexes: sharding_key exists in space, but there is ]] ..
-        [[no bucket_id in indexes]]
+    t.assert_equals(err,
+        [[spaces["space"].indexes: sharding_key exists in the space, but there's ]] ..
+        [[no bucket_id defined in 'indexes' section]]
     )
 
     t.assert_equals(box.space['_ddl_sharding_key'], nil)

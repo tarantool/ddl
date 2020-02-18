@@ -36,7 +36,7 @@ local function check_field(i, field, space)
         if type(field.type) ~= 'string' then
             return nil, string.format(
                 "spaces[%q].format[%q].type: bad value" ..
-                "(string expected, got %s)",
+                " (string expected, got %s)",
                 space.name, field.name, type(field.type)
             )
         end
@@ -390,8 +390,8 @@ end
 local function check_index(i, index, space)
     if type(index) ~= 'table' then
         return nil, string.format(
-            "spaces[%q].indexes[%d]: bad value " ..
-            "(table expected, got %s)",
+            "spaces[%q].indexes[%d]: bad value" ..
+            " (table expected, got %s)",
             space.name, i, type(index)
         )
     end
