@@ -93,9 +93,9 @@ function  g.test_invalid_format_bucket_id()
     g.space.sharding_key = nil
 
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].format["bucket_id"]: 'bucket_id' used for ]] ..
-        [[sharding, but no sharding_key was supplied]]
+    t.assert_equals(err,
+        [[spaces["space"].format["bucket_id"]: bucket_id is used for]] ..
+        [[ sharding, but there's no spaces["space"].sharding_key defined]]
     )
     t.assert_equals(ok, nil)
 
@@ -104,18 +104,18 @@ function  g.test_invalid_format_bucket_id()
     g.space.indexes[2].parts[1].type = 'integer'
 
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].format['bucket_id']: field type]] ..
-        [[ incorrect (expected unsigned, got integer)]]
+    t.assert_equals(err,
+        [[spaces["space"].format["bucket_id"].type: bad value]] ..
+        [[ (unsigned expected, got integer)]]
     )
     t.assert_equals(ok, nil)
 
     table.remove(g.space.format, 1)
     table.remove(g.space.indexes, 2)
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].format: sharding_key exists in space,]] ..
-        [[ but there is no bucket_id in format]]
+    t.assert_equals(err,
+        [[spaces["space"].format: sharding_key exists in the space,]] ..
+        [[ but there's no bucket_id defined in 'format' section]]
     )
     t.assert_equals(ok, nil)
 end
@@ -125,17 +125,17 @@ function g.test_invalid_index_bucket_id()
     g.space.sharding_key = nil
 
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].format["bucket_id"]: 'bucket_id' used for]] ..
-        [[ sharding, but no sharding_key was supplied]]
+    t.assert_equals(err,
+        [[spaces["space"].format["bucket_id"]: bucket_id is used for]] ..
+        [[ sharding, but there's no spaces["space"].sharding_key defined]]
     )
     t.assert_equals(ok, nil)
 
     g.space.sharding_key = old_sharding_key
     g.space.indexes[2].unique = true
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].indexes["bucket_id"]: bucket_id index can't be unique]]
+    t.assert_equals(err,
+        [[spaces["space"].indexes["bucket_id"].unique: bucket_id index can't be unique]]
     )
     t.assert_equals(ok, nil)
 
@@ -144,24 +144,25 @@ function g.test_invalid_index_bucket_id()
         path = 'integer_nonnull', type = 'integer', is_nullable = false
     })
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].indexes['bucket_id']: incorrect parts size (expected 1, got 2)]]
+    t.assert_equals(err,
+        [[spaces["space"].indexes["bucket_id"].parts:]] ..
+        [[ bucket_id index can't be composite (1 part expected, got 2 parts)]]
     )
     t.assert_equals(ok, nil)
 
     table.remove(g.space.indexes[2].parts, 1)
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].indexes['bucket_id'].parts[1].path: invalid field ]] ..
-        [[reference(expected reference to bucket_id, got integer_nonnull)]]
+    t.assert_equals(err,
+        [[spaces["space"].indexes["bucket_id"].parts[1].path: invalid field ]] ..
+        [[reference (reference to bucket_id expected, got integer_nonnull)]]
     )
     t.assert_equals(ok, nil)
 
     table.remove(g.space.indexes, 2)
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].indexes: sharding_key exists in space,]] ..
-        [[ but there is no bucket_id in indexes]]
+    t.assert_equals(err,
+        [[spaces["space"].indexes: sharding_key exists in the space,]] ..
+        [[ but there's no bucket_id defined in 'indexes' section]]
     )
     t.assert_equals(ok, nil)
 end
@@ -169,25 +170,24 @@ end
 function g.test_invalid_sharding_key()
     table.insert(g.space.sharding_key, g.space.sharding_key[2])
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].sharding_key: sharding_key contains duplicate "integer_nonnull"]]
+    t.assert_equals(err,
+        [[spaces["space"].sharding_key: sharding key contains duplicate "integer_nonnull"]]
     )
     t.assert_equals(ok, nil)
 
     g.space.sharding_key = {key = 5}
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"]: bad argument 'sharding_key' (contiguous array expected, got table]]
+    t.assert_equals(err,
+        [[spaces["space"].sharding_key: bad value (contiguous array expected, got table)]]
     )
     t.assert_equals(ok, nil)
-
 end
 
 function g.test_invalid_key_reference()
     g.space.sharding_key = {'undefined_field'}
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].sharding_key["undefined_field"]: invalid reference]] ..
+    t.assert_equals(err,
+        [[spaces["space"].sharding_key["undefined_field"]: invalid reference]] ..
         [[ to format["undefined_field"], no such field]]
     )
     t.assert_equals(ok, nil)
@@ -196,17 +196,17 @@ end
 function g.test_invalid_key_reference_type()
     g.space.sharding_key = {'map_nonnull'}
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].sharding_key["map_nonnull"]: key refereces to field ]] ..
-        [[with type map, but it's unsupported yet]]
+    t.assert_equals(err,
+        [[spaces["space"].sharding_key["map_nonnull"]: key references to field]] ..
+        [[ with map type, but it's not supported yet]]
     )
     t.assert_equals(ok, nil)
 
     g.space.sharding_key = {'array_nonnull'}
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].sharding_key["array_nonnull"]: key refereces to field ]] ..
-        [[with type array, but it's unsupported yet]]
+    t.assert_equals(err,
+        [[spaces["space"].sharding_key["array_nonnull"]: key references to field]] ..
+        [[ with array type, but it's not supported yet]]
     )
     t.assert_equals(ok, nil)
 end
@@ -214,9 +214,8 @@ end
 function g.test_invalid_key_reference_path()
     g.space.sharding_key = {'map_nonnull.data'}
     local ok, err = ddl.check_schema(g.schema)
-    t.assert_str_icontains(err,
-        [[space["space"].sharding_key["map_nonnull.data"]: key with json]] ..
-        [[ part is unsupported yet]]
+    t.assert_equals(err,
+        [[spaces["space"].sharding_key["map_nonnull.data"]: key containing JSONPath isn't supported yet]]
     )
     t.assert_equals(ok, nil)
 end

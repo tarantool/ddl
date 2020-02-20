@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Removed unnecessary logs
+- Fixed error messages
 
 ## [1.0.0] - 2019-11-28
 

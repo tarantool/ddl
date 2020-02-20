@@ -107,7 +107,7 @@ function g.test_index_part_collation()
 
     t.assert_not(ok)
     t.assert_equals(err,
-        "bad argument 'collation', (expected string (or no collation), got number)"
+        "bad value (?string expected, got number)"
     )
 
     local ok, err = ddl_check.check_index_part_collation("undefined")
@@ -119,7 +119,7 @@ end
 function g.test_index_part_type()
     local ok, err = ddl_check.check_index_part_type(nil, 'TREE')
     t.assert_not(ok)
-    t.assert_equals(err, "bad argument 'type' (expected string, got nil)")
+    t.assert_equals(err, "bad value (string expected, got nil)")
 
     local ok, err = ddl_check.check_index_part_type('undefined', 'TREE')
     t.assert_not(ok)
@@ -185,11 +185,11 @@ function g.test_index_part_path()
 
     local ok, err = ddl_check.check_index_part_path(nil, index_info, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, [[bad argument 'path' (string expecetd got nil)]])
+    t.assert_equals(err, "bad value (string expected, got nil)")
 
     local ok, err = ddl_check.check_index_part_path(5, index_info, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, "bad argument 'path' (string expecetd got number)")
+    t.assert_equals(err, "bad value (string expected, got number)")
 
 
     local ok, err = ddl_check.check_index_part_path('unsigned_nonnull', index_info, test_space_info)
@@ -207,8 +207,8 @@ function g.test_index_part_json_path()
             'map_nonnull.data.name', {type = 'HASH'}, test_space_info
         )
         t.assert_equals(err, string.format(
-            [[path (map_nonnull.data.name) is json_path, ]] ..
-            [[but your Tarantool version (%s) doesn't support this]],
+            "path (map_nonnull.data.name) is JSONPath," ..
+            " but your Tarantool version (%s) doesn't support this",
             _TARANTOOL
         ))
         t.assert_not(ok)
@@ -232,7 +232,7 @@ function g.test_index_part_json_path()
     else
         t.assert_not(ok)
         t.assert_equals(err, string.format(
-            [[path (map_nonnull.data[*].name) is multikey_path, but your Tarantool version]] ..
+            [[JSONPath (map_nonnull.data[*].name) has wildcard, but your Tarantool version]] ..
             [[ (%s) doesn't support this]], _TARANTOOL
         ))
         t.success()
@@ -247,8 +247,8 @@ function g.test_index_part_json_path()
     )
     t.assert_not(ok)
     t.assert_equals(err,
-        [[path (map_nonnull.data[*].name) is multikey, ]] ..
-        [[but index type HASH doesn't allow multikeys]]
+        "JSONPath (map_nonnull.data[*].name) has wildcard," ..
+        " but index type HASH doesn't allow this"
     )
 
     local ok, err = ddl_check.check_index_part_path(
@@ -256,8 +256,8 @@ function g.test_index_part_json_path()
     )
     t.assert_not(ok)
     t.assert_equals(err,
-        [[path (map_nonnull.data[*].name) is multikey, ]] ..
-        [[but index type BITSET doesn't allow multikeys]]
+        "JSONPath (map_nonnull.data[*].name) has wildcard," ..
+        " but index type BITSET doesn't allow this"
     )
 
     local ok, err = ddl_check.check_index_part_path(
@@ -265,8 +265,8 @@ function g.test_index_part_json_path()
     )
     t.assert_not(ok)
     t.assert_equals(err,
-        [[path (map_nonnull.data[*].name) is multikey, ]] ..
-        [[but index type RTREE doesn't allow multikeys]]
+        "JSONPath (map_nonnull.data[*].name) has wildcard," ..
+        " but index type RTREE doesn't allow this"
     )
 
     local ok, err = ddl_check.check_index_part_path(
@@ -274,11 +274,10 @@ function g.test_index_part_json_path()
     )
     t.assert_not(ok)
     t.assert_equals(err,
-        [[path (map_nonnull.data[*].name) is multikey, ]] ..
-        [[but index type HASH doesn't allow multikeys]]
+        "JSONPath (map_nonnull.data[*].name) has wildcard," ..
+        " but index type HASH doesn't allow this"
     )
 end
-
 
 function g.test_index_part_types_equality()
     local index = {
@@ -305,15 +304,15 @@ function g.test_index_part_types_equality()
     local ok, err = ddl_check.check_index_part(3, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"].parts[3].type: type differs from ' ..
-        'space.format.field["string_nonnull"] (expected string, got unsigned)'
+        'spaces["space"].indexes["primary"].parts[3].type: type differs from ' ..
+        'spaces["space"].format["string_nonnull"].type (string expected, got unsigned)'
     )
 
     local ok, err = ddl_check.check_index_part(4, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"].parts[4].type: type differs from ' ..
-        'space.format.field["string_nonnull"] (expected string, got integer)'
+        'spaces["space"].indexes["primary"].parts[4].type: type differs from ' ..
+        'spaces["space"].format["string_nonnull"].type (string expected, got integer)'
     )
 
     if db.v(2, 0) then
@@ -324,8 +323,8 @@ function g.test_index_part_types_equality()
         local ok, err = ddl_check.check_index_part(6, index, test_space_info)
         t.assert_not(ok)
         t.assert_equals(err,
-            'space["space"].indexes["primary"].parts[6].type: type differs ' ..
-            'from space.format.field["map_nonnull"] (expected map, got string)'
+            'spaces["space"].indexes["primary"].parts[6].type: type differs ' ..
+            'from spaces["space"].format["map_nonnull"].type (map expected, got string)'
         )
     end
 end
@@ -356,31 +355,31 @@ function g.test_index_part_nullable_equality()
     local ok, err = ddl_check.check_index_part(3, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"].parts[3].is_nullable: ]] ..
-        [[bad argument 'is_nullable' (expected boolean, got nil)]]
+        [[spaces["space"].indexes["primary"].parts[3].is_nullable:]] ..
+        [[ bad value (boolean expected, got nil)]]
     )
 
     local ok, err = ddl_check.check_index_part(4, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"].parts[4].is_nullable: ]] ..
-        [[bad argument 'is_nullable' (expected boolean, got number)]]
+        [[spaces["space"].indexes["primary"].parts[4].is_nullable:]] ..
+        [[ bad value (boolean expected, got number)]]
     )
 
     local ok, err = ddl_check.check_index_part(5, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"].parts[5].is_nullable: ' ..
-        'has different nullability with ' ..
-        'space.foramat.field["string_nonnull"] (expected false, got true)'
+        'spaces["space"].indexes["primary"].parts[5].is_nullable:' ..
+        ' has different nullability with' ..
+        ' spaces["space"].format["string_nonnull"].is_nullable (false expected, got true)'
     )
 
     local ok, err = ddl_check.check_index_part(6, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"].parts[6].is_nullable: ' ..
-        'has different nullability with ' ..
-        'space.foramat.field["string_nullable"] (expected true, got false)'
+        'spaces["space"].indexes["primary"].parts[6].is_nullable:' ..
+        ' has different nullability with' ..
+        ' spaces["space"].format["string_nullable"].is_nullable (true expected, got false)'
     )
 end
 
@@ -396,7 +395,7 @@ function g.test_invalid_index_part()
     local ok, err = ddl_check.check_index_part(1, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"]: bad argument parts[1]' ..
+        'spaces["space"].indexes["primary"].parts[1]: bad value' ..
         ' (table expected, got nil)'
     )
 
@@ -404,7 +403,7 @@ function g.test_invalid_index_part()
     local ok, err = ddl_check.check_index_part(1, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"]: bad argument parts[1]' ..
+        'spaces["space"].indexes["primary"].parts[1]: bad value' ..
         ' (table expected, got number)'
     )
 end
@@ -426,7 +425,7 @@ function g.test_index_part()
     local ok, err = ddl_check.check_index_part(1, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"].parts[1].path: path (no_reference)' ..
+        'spaces["space"].indexes["primary"].parts[1].path: path (no_reference)' ..
         ' referencing to unknown field'
     )
 
@@ -452,7 +451,7 @@ function g.test_index_part()
     local ok, err = ddl_check.check_index_part(1, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"].parts[1].collation: unknown collation "undefined"'
+        'spaces["space"].indexes["primary"].parts[1].collation: unknown collation "undefined"'
     )
 
     -- check collation with not string type
@@ -462,8 +461,8 @@ function g.test_index_part()
     local ok, err = ddl_check.check_index_part(1, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"].parts[1].collation: type "unsigned"]] ..
-        [[ doesn't allow collation (only string type)]]
+        [[spaces["space"].indexes["primary"].parts[1].collation: type unsigned]] ..
+        [[ doesn't allow collation (only string type does)]]
     )
 
     -- chceck index part types equality
@@ -480,8 +479,8 @@ function g.test_index_part()
     local ok, err = ddl_check.check_index_part(1, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"].parts[1].type: type differs from ' ..
-        'space.format.field["string_nonnull"] (expected string, got unsigned)'
+        'spaces["space"].indexes["primary"].parts[1].type: type differs from ' ..
+        'spaces["space"].format["string_nonnull"].type (string expected, got unsigned)'
     )
 
     index.parts = {
@@ -490,7 +489,7 @@ function g.test_index_part()
     local ok, err = ddl_check.check_index_part(1, index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"].parts[1].type: unknown type "undefined"'
+        'spaces["space"].indexes["primary"].parts[1].type: unknown type "undefined"'
     )
 end
 
@@ -514,7 +513,7 @@ function g.test_index_parts()
     local ok, err = ddl_check.check_index_parts(index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"].parts[1].path: ' ..
+        'spaces["space"].indexes["primary"].parts[1].path: ' ..
         'path (no_reference) referencing to unknown field'
     )
 
@@ -523,8 +522,8 @@ function g.test_index_parts()
     local ok, err = ddl_check.check_index_parts(index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"]: bad argument 'parts' ]] ..
-        [[(contiguous array of tables expected, got nil)]]
+        [[spaces["space"].indexes["primary"].parts: bad value]] ..
+        [[ (contiguous array of tables expected, got nil)]]
     )
 
 
@@ -532,8 +531,8 @@ function g.test_index_parts()
     local ok, err = ddl_check.check_index_parts(index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"]: bad argument 'parts' ]] ..
-        [[(contiguous array of tables expected, got number)]]
+        [[spaces["space"].indexes["primary"].parts: bad value]] ..
+        [[ (contiguous array of tables expected, got number)]]
     )
 
 
@@ -544,8 +543,8 @@ function g.test_index_parts()
     local ok, err = ddl_check.check_index_parts(index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"]: bad argument 'parts' ]] ..
-        [[(contiguous array of tables expected, got table)]]
+        [[spaces["space"].indexes["primary"].parts: bad value]] ..
+        [[ (contiguous array of tables expected, got table)]]
     )
 
     local index_with_same_parts = {
@@ -559,8 +558,8 @@ function g.test_index_parts()
     local ok, err = ddl_check.check_index_parts(index_with_same_parts, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["hash"].part[2]: field ' ..
-        '"string_nonnull" was indexed already by part[1]'
+        'spaces["space"].indexes["hash"].parts[2]: field ' ..
+        '"string_nonnull" is already indexed in parts[1]'
     )
 end
 
@@ -586,7 +585,7 @@ function g.test_check_index_hash()
 
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, 'space["space"].indexes["hash"]: HASH index must be unique')
+    t.assert_equals(err, 'spaces["space"].indexes["hash"]: HASH index must be unique')
 
 
     local bad_index = table.deepcopy(hash_index)
@@ -595,7 +594,7 @@ function g.test_check_index_hash()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["hash"].parts[1].type: array field' ..
+        'spaces["space"].indexes["hash"].parts[1].type: array field' ..
         ' type is unsupported in HASH index type'
     )
 
@@ -609,8 +608,8 @@ function g.test_check_index_hash()
         local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
         t.assert_not(ok)
         t.assert_equals(err,
-            [[space["space"].indexes["hash"].parts[3].path: path (map_nonnull.data[*].name) ]] ..
-            [[is multikey, but index type HASH doesn't allow multikeys]]
+            [[spaces["space"].indexes["hash"].parts[3].path: JSONPath (map_nonnull.data[*].name)]] ..
+            [[ has wildcard, but index type HASH doesn't allow this]]
         )
     end
 end
@@ -636,7 +635,7 @@ function g.test_tree_index()
     local ok, err = ddl_check.check_index(2, tree_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["tree"].parts[1].type: array' ..
+        'spaces["space"].indexes["tree"].parts[1].type: array' ..
         ' field type is unsupported in TREE index type'
     )
 end
@@ -661,7 +660,7 @@ function g.test_bitset_index()
     bad_index.unique = true
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"].indexes["bitset"]: BITSET index can't be unique]])
+    t.assert_equals(err, [[spaces["space"].indexes["bitset"]: BITSET index can't be unique]])
 
 
     local bad_index = table.deepcopy(bitset_index)
@@ -669,8 +668,8 @@ function g.test_bitset_index()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["bitset"].part[1]: "BITSET" index type doesn't]] ..
-        [[ support nullable field]]
+        [[spaces["space"].indexes["bitset"].parts[1]: index of BITSET type doesn't]] ..
+        [[ support nullable fields]]
     )
 
 
@@ -679,7 +678,7 @@ function g.test_bitset_index()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["bitset"].parts[1].type: integer field]] ..
+        [[spaces["space"].indexes["bitset"].parts[1].type: integer field]] ..
         [[ type is unsupported in BITSET index type]]
     )
 
@@ -688,8 +687,8 @@ function g.test_bitset_index()
     local ok, err = ddl_check.check_index(2, bitset_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["bitset"].parts: "BITSET" index type doesn't]] ..
-        [[ support multipart keys, actually it contains 2 parts]]
+        [[spaces["space"].indexes["bitset"].parts: index of BITSET type can't]] ..
+        [[ be composite (currently, index contains 2 parts)]]
     )
 end
 
@@ -715,7 +714,7 @@ function g.test_rtree_index()
     bad_index.unique = true
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"].indexes["rtree"]: RTREE index can't be unique]])
+    t.assert_equals(err, [[spaces["space"].indexes["rtree"]: RTREE index can't be unique]])
 
 
     local bad_index = table.deepcopy(rtree_index)
@@ -723,8 +722,8 @@ function g.test_rtree_index()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["rtree"].part[1]: "RTREE" index type doesn't]] ..
-        [[ support nullable field]]
+        [[spaces["space"].indexes["rtree"].parts[1]: index of RTREE type doesn't]] ..
+        [[ support nullable fields]]
     )
 
 
@@ -733,7 +732,7 @@ function g.test_rtree_index()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["rtree"].parts[1].type: string field]] ..
+        [[spaces["space"].indexes["rtree"].parts[1].type: string field]] ..
         [[ type is unsupported in RTREE index type]]
     )
 
@@ -743,8 +742,8 @@ function g.test_rtree_index()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["rtree"].dimension: bad argument 'dimension' ]] ..
-        [[(number expected in range [1, 20], got nil)]]
+        [[spaces["space"].indexes["rtree"].dimension: bad value]] ..
+        [[ (number in range [1, 20] expected, got nil)]]
     )
 
 
@@ -753,8 +752,8 @@ function g.test_rtree_index()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["rtree"].dimension: bad argument 'dimension' ]] ..
-        [[it must belong to range [1, 20], got -1]]
+        [[spaces["space"].indexes["rtree"].dimension: incorrect value]] ..
+        [[ (must be in range [1, 20], got -1)]]
     )
 
 
@@ -763,8 +762,8 @@ function g.test_rtree_index()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["rtree"].distance: bad argument 'distance' ]] ..
-        [[(string expected, got nil)]]
+        [[spaces["space"].indexes["rtree"].distance: bad value]] ..
+        [[ (string expected, got nil)]]
     )
 
     local bad_index = table.deepcopy(rtree_index)
@@ -772,7 +771,7 @@ function g.test_rtree_index()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["rtree"].distance: distance "unknown" is unknown'
+        'spaces["space"].indexes["rtree"].distance: unknown distance "unknown"'
     )
 
 
@@ -780,8 +779,8 @@ function g.test_rtree_index()
     local ok, err = ddl_check.check_index(2, rtree_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["rtree"].parts: "RTREE" index type doesn't]] ..
-        [[ support multipart keys, actually it contains 2 parts]]
+        [[spaces["space"].indexes["rtree"].parts: index of RTREE type can't]] ..
+        [[ be composite (currently, index contains 2 parts)]]
     )
 end
 
@@ -790,25 +789,25 @@ function g.test_invalid_index()
 
     local ok, err = ddl_check.check_index(1, nil, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, 'space["space"]: bad argument indexes[1] (table expected, got nil)')
+    t.assert_equals(err, 'spaces["space"].indexes[1]: bad value (table expected, got nil)')
 
 
     local ok, err = ddl_check.check_index(1, 5, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, 'space["space"]: bad argument indexes[1] (table expected, got number)')
+    t.assert_equals(err, 'spaces["space"].indexes[1]: bad value (table expected, got number)')
 
 
     local bad_index = {}
     local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"].indexes[1]: bad argument 'name' (string expected, got nil)]])
+    t.assert_equals(err, [[spaces["space"].indexes[1].name: bad value (string expected, got nil)]])
 
 
     bad_index.name = 'primary'
     local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"]: bad argument 'unique' (boolean expected, got nil)]]
+        [[spaces["space"].indexes["primary"].unique: bad value (boolean expected, got nil)]]
     )
 
 
@@ -816,14 +815,14 @@ function g.test_invalid_index()
     local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"]: bad argument 'type' (string expected, got nil)]]
+        [[spaces["space"].indexes["primary"].type: bad value (string expected, got nil)]]
     )
 
 
     bad_index.type = 'BTREE'
     local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, 'space["space"].indexes["primary"]: unknown type "BTREE"')
+    t.assert_equals(err, 'spaces["space"].indexes["primary"].type: unknown type "BTREE"')
 
 
     bad_index.type = 'HASH'
@@ -833,7 +832,7 @@ function g.test_invalid_index()
     local ok, err = ddl_check.check_index(1, bad_index, space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].indexes["primary"]: vinyl engine does not support index.type HASH'
+        [[spaces["space"].indexes["primary"]: vinyl engine doesn't support HASH index type]]
     )
 
 
@@ -850,8 +849,8 @@ function g.test_invalid_index()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"].parts[1].is_nullable: has different nullability]] ..
-        [[ with space.foramat.field["string_nullable"] (expected true, got false)]]
+        [[spaces["space"].indexes["primary"].parts[1].is_nullable: has different nullability]] ..
+        [[ with spaces["space"].format["string_nullable"].is_nullable (true expected, got false)]]
     )
 
 
@@ -861,8 +860,8 @@ function g.test_invalid_index()
     local ok, err = ddl_check.check_index(2, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"]: bad argument 'parts' ]] ..
-        [[(contiguous array of tables expected, got nil)]]
+        [[spaces["space"].indexes["primary"].parts: bad value]] ..
+        [[ (contiguous array of tables expected, got nil)]]
     )
 end
 
@@ -887,7 +886,7 @@ function g.test_primary_index()
 
     local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, 'space["space"].indexes["primary"]: primary TREE index must be unique')
+    t.assert_equals(err, 'spaces["space"].indexes["primary"]: primary TREE index must be unique')
 
 
     local bad_index = table.deepcopy(good_index)
@@ -896,8 +895,8 @@ function g.test_primary_index()
         local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
         t.assert_not(ok)
         t.assert_equals(err,
-            [[space["space"].indexes["primary"].part[3].path: primary indexes doesn't]] ..
-            [[ allows multikey, actually path (map_nonnull.data[*].name) is multikey]]
+            [[spaces["space"].indexes["primary"].parts[3].path: primary index doesn't]] ..
+            [[ allow JSONPath wildcard (path map_nonnull.data[*].name has wildcard)]]
         )
     end
 
@@ -906,7 +905,7 @@ function g.test_primary_index()
 
     local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"].indexes["primary"]: BITSET index can't be primary]])
+    t.assert_equals(err, [[spaces["space"].indexes["primary"]: BITSET index can't be primary]])
 
 
     local bad_index = table.deepcopy(good_index)
@@ -914,7 +913,7 @@ function g.test_primary_index()
 
     local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"].indexes["primary"]: RTREE index can't be primary]])
+    t.assert_equals(err, [[spaces["space"].indexes["primary"]: RTREE index can't be primary]])
 
 
     local bad_index = table.deepcopy(good_index)
@@ -923,7 +922,7 @@ function g.test_primary_index()
     local ok, err = ddl_check.check_index(1, bad_index, test_space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"].part[3].path: primary indexes can't contains nullable parts]]
+        [[spaces["space"].indexes["primary"].parts[3].is_nullable: primary index can't contain nullable parts]]
     )
 end
 
@@ -932,54 +931,53 @@ function g.test_invalid_space()
 
     local ok, err = ddl_check.check_space(4, {})
     t.assert_not(ok)
-    t.assert_equals(err, 'space["4"]: invaliad space_name type (expected string, got number)')
-
+    t.assert_equals(err, 'spaces[4]: invalid space name (string expected, got number)')
 
     local ok, err = ddl_check.check_space('space', 5)
     t.assert_not(ok)
-    t.assert_equals(err, 'space[space]: invaliad space type (expected table, got number)')
+    t.assert_equals(err, 'spaces["space"]: bad value (table expected, got number)')
 
 
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"]: bad argument 'engine' (string expected, got nil)]])
+    t.assert_equals(err, 'spaces["space"].engine: bad value (string expected, got nil)')
 
 
     space.engine = 'undefined'
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
-    t.assert_equals(err, 'space["space"]: unknown engine "undefined"')
+    t.assert_equals(err, 'spaces["space"].engine: unknown engine "undefined"')
 
 
     space.engine = 'vinyl'
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"]: bad argument 'is_local' (boolean expected, got nil)]])
+    t.assert_equals(err, 'spaces["space"].is_local: bad value (boolean expected, got nil)')
 
 
     space.is_local = true
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"]: bad argument 'temporary' (boolean expected, got nil)]])
+    t.assert_equals(err, 'spaces["space"].temporary: bad value (boolean expected, got nil)')
 
 
     space.temporary = true
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"]: vinyl engine doesn't support temporary spaces]])
+    t.assert_equals(err, [[spaces["space"]: vinyl engine doesn't support temporary spaces]])
 
 
     space.temporary = false
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
-    t.assert_equals(err, [[space["space"]: bad argument 'format' (contiguous array expected, got nil)]])
+    t.assert_equals(err, 'spaces["space"].format: bad value (contiguous array expected, got nil)')
 
 
     space.format = {}
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"]: bad argument 'indexes' (contiguous array expected, got nil)]]
+        'spaces["space"].indexes: bad value (contiguous array expected, got nil)'
     )
 end
 
@@ -991,21 +989,22 @@ function g.test_invalid_space_field_format()
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].format[10]:  this name "unsigned_nonnull" already used in this space.format'
+        'spaces["space"].format[10].name: this space already' ..
+        ' has field with name "unsigned_nonnull"'
     )
 
     space.format[10] = {name = 'field', type = 'not_found', is_nullable = false}
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
-    t.assert_equals(err, 'space["space"].fields["field"]: unknown type "not_found"')
+    t.assert_equals(err, 'spaces["space"].format["field"].type: unknown type "not_found"')
 
 
     space.format[5] = {name = 'field', type = 'unsigned'}
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].fields["field"]: bad argument 'is_nullable' ]] ..
-        [[(boolean expected, got nil)]]
+        'spaces["space"].format["field"].is_nullable: bad value' ..
+        ' (boolean expected, got nil)'
     )
 
 
@@ -1013,7 +1012,7 @@ function g.test_invalid_space_field_format()
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].fields[5]: bad argument 'name' (string expected, got nil)]]
+        'spaces["space"].format[5].name: bad value (string expected, got nil)'
     )
 
 
@@ -1021,7 +1020,7 @@ function g.test_invalid_space_field_format()
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"]: bad argument 'format' (contiguous array expected, got nil)]]
+        'spaces["space"].format: bad value (contiguous array expected, got nil)'
     )
 
 
@@ -1029,7 +1028,7 @@ function g.test_invalid_space_field_format()
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"]: bad argument 'format' (contiguous array expected, got table)]]
+        'spaces["space"].format: bad value (contiguous array expected, got table)'
     )
 end
 
@@ -1039,7 +1038,7 @@ function g.test_invalid_space_indexes()
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"]: bad argument 'indexes' (contiguous array expected, got nil)]]
+        'spaces["space"].indexes: bad value (contiguous array expected, got nil)'
     )
 
 
@@ -1048,7 +1047,7 @@ function g.test_invalid_space_indexes()
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
     t.assert_equals(err,
-        'space["space"].index[2].name: this name "primary" already used in this space.indexes'
+        'spaces["space"].indexes[2].name: this space already has index with name "primary"'
     )
 
 
@@ -1057,7 +1056,7 @@ function g.test_invalid_space_indexes()
     local ok, err = ddl_check.check_space('space', space)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].indexes["primary"]: BITSET index can't be primary]]
+        [[spaces["space"].indexes["primary"]: BITSET index can't be primary]]
     )
 end
 
@@ -1082,27 +1081,27 @@ function g.test_field()
 
     local ok, err = ddl_check.check_field(1, nil, space_info)
     t.assert_not(ok)
-    t.assert_equals(err, 'space["space"]: bad argument fields[1] (table expected, got nil)')
+    t.assert_equals(err, 'spaces["space"].format[1]: bad value (table expected, got nil)')
 
 
     local ok, err = ddl_check.check_field(1, {}, space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].fields[1]: bad argument 'name' (string expected, got nil)]]
+        'spaces["space"].format[1].name: bad value (string expected, got nil)'
     )
 
 
     local ok, err = ddl_check.check_field(1, {name = 'x'}, space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].fields["x"]: bad argument 'is_nullable' (boolean expected, got nil)]]
+        [[spaces["space"].format["x"].is_nullable: bad value (boolean expected, got nil)]]
     )
 
 
     local ok, err = ddl_check.check_field(1, {name = 'x', is_nullable = false}, space_info)
     t.assert_not(ok)
     t.assert_equals(err,
-        [[space["space"].fields["x"]: bad argument 'type' (string expected, got nil)]]
+        'spaces["space"].format["x"].type: bad value (string expected, got nil)'
     )
 
 
@@ -1110,7 +1109,7 @@ function g.test_field()
         1, {name = 'x', type = 'undefined', is_nullable = false}, space_info
     )
     t.assert_not(ok)
-    t.assert_equals(err, 'space["space"].fields["x"]: unknown type "undefined"')
+    t.assert_equals(err, 'spaces["space"].format["x"].type: unknown type "undefined"')
 
 
     local ok, err = ddl_check.check_field(
@@ -1122,7 +1121,7 @@ function g.test_field()
     else
         t.assert_not(ok)
         t.assert_equals(err, string.format(
-            [[space["space"].fields["x"]: varbinary type ]] ..
+            [[spaces["space"].format["x"].type: varbinary type ]] ..
             [[isn't allowed in your Tarantool version (%s)]],
             _TARANTOOL
         ))
@@ -1192,8 +1191,8 @@ function g.test_scalar_types()
     }
     local res, err = ddl_check.check_space('space', get_test_space(index))
     t.assert_equals(err,
-        [[space["space"].indexes["pk"].parts[1].type: type differs from ]] ..
-        [[space.format.field["integer_nonnull"] (expected integer, got string)]]
+        [[spaces["space"].indexes["pk"].parts[1].type: type differs from ]] ..
+        [[spaces["space"].format["integer_nonnull"].type (integer expected, got string)]]
     )
     t.assert_equals(res, nil)
 
@@ -1225,8 +1224,8 @@ function g.test_scalar_types()
     }
     local res, err = ddl_check.check_space('space', get_test_space(index))
     t.assert_str_icontains(err,
-        [[space["space"].indexes["pk"].parts[1].type: type differs from ]] ..
-        [[space.format.field["map_nonnull"] (expected map, got scalar)]]
+        [[spaces["space"].indexes["pk"].parts[1].type: type differs from ]] ..
+        [[spaces["space"].format["map_nonnull"].type (map expected, got scalar)]]
     )
     t.assert_equals(res, nil)
 

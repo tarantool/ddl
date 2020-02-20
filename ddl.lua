@@ -6,10 +6,11 @@ local ddl_check = require('ddl.check')
 local utils = require('ddl.utils')
 
 local function check_schema_format(schema)
-    local err_msg = 'Bad argument #1 to ddl.%s'
 
     if type(schema) ~= 'table' then
-        return nil, err_msg .. ' (schema expected, got ' .. type(schema) .. ')'
+        return nil, string.format(
+            "Invalid schema (table expected, got %s)", type(schema)
+        )
     end
 
     local spaces = schema.spaces
@@ -18,8 +19,9 @@ local function check_schema_format(schema)
     end
 
     if type(spaces) ~= 'table' then
-        return nil, err_msg ..' invalid schema.spaces (?table expected, got ' ..
-            type(spaces) .. ')'
+        return nil, string.format(
+            "spaces: must be a table, got %s", type(spaces)
+        )
     end
 
     return true
@@ -28,7 +30,7 @@ end
 local function check_schema(schema)
     local ok, err = check_schema_format(schema)
     if not ok then
-        return nil, string.format(err, 'check_schema')
+        return nil, err
     end
 
     local spaces = schema.spaces
@@ -37,11 +39,11 @@ local function check_schema(schema)
     end
 
     if type(box.cfg) == 'function' then
-        return nil, "Box isn't configured yet"
+        return nil, "'box' module isn't configured yet"
     end
 
     if box.cfg.read_only then
-        return nil, "Box is read only"
+        return nil, "Instance is read-only (box.cfg.read_only=true)"
     end
 
     for space_name, space_schema in pairs(spaces) do
@@ -55,7 +57,7 @@ local function check_schema(schema)
             local equal = utils.deepcmp(space_schema, current_schema, diff)
             if not equal then
                 return nil, string.format(
-                    "Incompatible schema: space[%q]" ..
+                    "Incompatible schema: spaces[%q]" ..
                     " %s (expected %s, got %s)",
                     space_name, diff.path, diff.expected, diff.got
                 )
@@ -83,7 +85,7 @@ end
 local function set_schema(schema)
     local ok, err = check_schema_format(schema)
     if not ok then
-        return nil, string.format(err, 'set_schema')
+        return nil, err
     end
 
     local spaces = schema.spaces
