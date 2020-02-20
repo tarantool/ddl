@@ -1207,8 +1207,9 @@ function g.test_scalar_types()
     }
     local res, err = ddl_check.check_space('space', get_test_space(index))
     t.assert_equals(err,
-        [[space["space"].indexes["pk"].parts[1].type: type differs from ]] ..
-        [[space.format.field["decimal_nonnull"] (expected decimal, got double)]]
+        [[spaces["space"].indexes["pk"].parts[1].type: type differs from ]] ..
+        [[spaces["space"].format["decimal_nonnull"].type ]] ..
+        [[(decimal expected, got double)]]
     )
     t.assert_equals(res, nil)
 
