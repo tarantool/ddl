@@ -1116,7 +1116,7 @@ function g.test_tarantool_2_3_types()
     if not db.v(2, 3) then
         t.assert_equals(ok, nil)
         t.assert_equals(err,
-            [[space["test"]: Failed to create space 'test':]] ..
+            [[spaces["test"]: Failed to create space 'test':]] ..
             [[ field 3 has unknown field type]]
         )
         t.success()
@@ -1141,7 +1141,8 @@ function g.test_tarantool_2_3_types()
     local ok, err = ddl.set_schema(schema)
     t.assert_equals(ok, nil)
     t.assert_equals(err,
-        'space["test"].indexes["primary"].parts[1].type: type differs from' ..
-        ' space.format.field["decimal_nonnull"] (expected decimal, got double)'
+        'spaces["test"].indexes["primary"].parts[1].type: type differs from' ..
+        ' spaces["test"].format["decimal_nonnull"].type' ..
+        ' (decimal expected, got double)'
     )
 end
