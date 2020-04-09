@@ -34,7 +34,7 @@ local function create_index(box_space, ddl_index)
         type = ddl_index.type,
         unique = ddl_index.unique,
         parts = index_parts,
-        seuence = sequence_name,
+        sequence = sequence_name,
         dimension = ddl_index.dimension,
         distance = ddl_index.distance,
         func = ddl_index.func and ddl_index.func.name,
