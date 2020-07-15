@@ -36,6 +36,8 @@ local test_space = {
         {name = 'decimal_null', type = 'decimal', is_nullable = true},
         {name = 'double_nonnull', type = 'double', is_nullable = false},
         {name = 'double_null', type = 'double', is_nullable = true},
+        {name = 'uuid_nonnull', type = 'uuid', is_nullable = false},
+        {name = 'uuid_null', type = 'uuid', is_nullable = true},
     },
 }
 
@@ -163,6 +165,22 @@ function g.test_index_part_type()
     local ok, err = ddl_check.check_index_part_type('string', 'RTREE')
     t.assert_not(ok)
     t.assert_equals(err, "string field type is unsupported in RTREE index type")
+
+    local ok, err = ddl_check.check_index_part_type('uuid', 'HASH')
+    t.assert(ok)
+    t.assert_not(err)
+
+    local ok, err = ddl_check.check_index_part_type('uuid', 'TREE')
+    t.assert(ok)
+    t.assert_not(err)
+
+    local ok, err = ddl_check.check_index_part_type('uuid', 'BITSET')
+    t.assert_not(ok)
+    t.assert_equals(err, "uuid field type is unsupported in BITSET index type")
+
+    local ok, err = ddl_check.check_index_part_type('uuid', 'RTREE')
+    t.assert_not(ok)
+    t.assert_equals(err, "uuid field type is unsupported in RTREE index type")
 end
 
 function g.test_varbinaty_index_part_type()

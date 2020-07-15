@@ -50,7 +50,7 @@ format = {
                     type = 'unsigned' | 'string' | 'varbinary' |
                             'integer' | 'number' | 'boolean' |
                             'array' | 'scalar' | 'any' | 'map' |
-                            'decimal' | 'double'
+                            'decimal' | 'double' | 'uuid'
                 },
                 ...
             },
@@ -69,7 +69,7 @@ format = {
                             -- may be multipath if '[*]' is used,
                             type = 'unsigned' | 'string' | 'varbinary' |
                                 'integer' | 'number' | 'boolean' | 'scalar' |
-                                'decimal' | 'double',
+                                'decimal' | 'double' | 'uuid',
                             is_nullable = true | false,
                             collation = nil | 'none' |
                                 'unicode' | 'unicode_ci' | '...',

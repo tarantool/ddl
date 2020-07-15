@@ -54,6 +54,7 @@ local function check_field(i, field, space)
             any       = true,
             decimal   = true,
             double    = true,
+            uuid      = true,
         }
 
         if known_field_types[field.type] == nil then
@@ -193,6 +194,7 @@ local function check_index_part_type(part_type, index_type)
         varbinary = true,
         decimal = true,
         double = true,
+        uuid = true,
     }
 
     if not known_part_types[part_type] then

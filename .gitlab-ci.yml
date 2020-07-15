@@ -27,10 +27,15 @@ test-opensource-2.2:
   variables:
     TARANTOOL_REPO: "2_2"
 
-test-opensource-2.x:
+test-opensource-2.3:
   <<: *test-opensource
   variables:
     TARANTOOL_REPO: "2_3"
+
+test-opensource-2.x:
+  <<: *test-opensource
+  variables:
+    TARANTOOL_REPO: "2_4"
 
 publish-scm-1:
   stage: publish
