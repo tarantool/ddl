@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.2.0] - 2020-07-17
+
+### Added
+
+- Support `uuid` types for tarantool 2.4
+
 ## [1.1.0] - 2020-04-09
 
 ### Added
