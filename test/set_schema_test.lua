@@ -1146,3 +1146,37 @@ function g.test_tarantool_2_3_types()
         ' (decimal expected, got double)'
     )
 end
+
+function g.test_tarantool_2_4_types()
+    local spaces = table.deepcopy(test_space)
+    spaces.test.format = {
+        {name = 'uuid_nonnull', type = 'uuid', is_nullable = false},
+        {name = 'uuid_nullable', type = 'uuid', is_nullable = true},
+    }
+
+    local schema = {spaces = spaces}
+
+    local ok_primary = {
+        name = 'primary',
+        type = 'TREE',
+        unique = true,
+        parts = {
+            {is_nullable = false, path = 'uuid_nonnull', type = 'uuid'},
+        }
+    }
+
+    schema.spaces.test.indexes = {ok_primary}
+    local ok, err = ddl.set_schema(schema)
+
+    if not db.v(2, 4) then
+        t.assert_equals(ok, nil)
+        t.assert_equals(err,
+            [[spaces["test"]: Failed to create space 'test':]] ..
+            [[ field 1 has unknown field type]]
+        )
+        t.success()
+    end
+
+    t.assert_equals(err, nil)
+    t.assert_equals(ok, true)
+end
