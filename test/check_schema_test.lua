@@ -4,9 +4,9 @@ local t = require('luatest')
 local db = require('test.db')
 local ddl_check = require('ddl.check')
 
-local g = t.group('check_schema')
-g.before_all = db.init
-g.setup = db.drop_all
+local g = t.group()
+g.before_all(db.init)
+g.before_each(db.drop_all)
 
 local test_space = {
     engine = 'memtx',

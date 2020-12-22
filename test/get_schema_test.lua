@@ -4,9 +4,9 @@ local t = require('luatest')
 local db = require('test.db')
 local ddl = require('ddl')
 
-local g = t.group('get_schema')
-g.before_all = db.init
-g.setup = db.drop_all
+local g = t.group()
+g.before_all(db.init)
+g.before_each(db.drop_all)
 
 function g.test_valid_ddl_format()
     g.space = box.schema.space.create('test_schema', {

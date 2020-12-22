@@ -4,7 +4,7 @@ local t = require('luatest')
 local db = require('test.db')
 local ddl = require('ddl')
 
-local g = t.group('check_sharding_key')
+local g = t.group()
 local test_space = {
     engine = 'memtx',
     is_local = true,
@@ -48,8 +48,8 @@ local bucket_id_idx = {
     name = 'bucket_id'
 }
 
-g.before_all = db.init
-g.setup = function()
+g.before_all(db.init)
+g.before_each(function()
     db.drop_all()
 
     g.space = table.deepcopy(test_space)
@@ -65,7 +65,7 @@ g.setup = function()
     g.schema = {spaces = {
         space = g.space,
     }}
-end
+end)
 
 
 function g.test_sharding_key_ok()

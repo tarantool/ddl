@@ -5,9 +5,9 @@ local db = require('test.db')
 local ddl = require('ddl')
 local log = require('log')
 
-local g = t.group('set_schema')
-g.before_all = db.init
-g.setup = db.drop_all
+local g = t.group()
+g.before_all(db.init)
+g.before_each(db.drop_all)
 
 local function init_test_data()
     local space_format = {

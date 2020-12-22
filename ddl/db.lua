@@ -21,11 +21,11 @@ local function json_path_allowed()
 end
 
 local function multikey_path_allowed()
-    return check_version(2, 2) --major_version() > 1 and minor_version() > 1
+    return check_version(2, 2)
 end
 
 local function varbinary_allowed()
-    return check_version(2, 2) --major_version() > 1
+    return check_version(2, 2)
 end
 
 return {
