@@ -1,3 +1,7 @@
+<a href="https://github.com/tarantool/ddl/actions?query=workflow%3ATest">
+<img src="https://github.com/tarantool/ddl/workflows/Test/badge.svg">
+</a>
+
 # DDL
 
 DDL module for Tarantool 1.10+
