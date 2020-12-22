@@ -73,14 +73,13 @@ local function check_field(i, field, space)
     end
 
 
-    do -- check redundant keys
-        local k = utils.redundant_key(field,
-            {'name', 'type', 'is_nullable'}
-        )
-        if k ~= nil then
+    -- non-string keys are forbidden
+    for k, _ in pairs(field) do
+        if type(k) ~= 'string' then
             return nil, string.format(
-                "spaces[%q].format[%q]: redundant key %q",
-                space.name, field.name, k
+                "spaces[%q].format[%q]: bad key %s" ..
+                " (string expected, got %s)",
+                space.name, field.name, k, type(k)
             )
         end
     end
