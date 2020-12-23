@@ -890,6 +890,31 @@ function g.test_missing_format()
     )
 end
 
+function g.test_annotated_format()
+    local schema = {spaces = table.deepcopy(test_space)}
+    schema.spaces.test.indexes = {{
+        type = 'TREE',
+        unique = true,
+        name = 'primary',
+        parts = {{path = 'unsigned_nonnull', type = 'unsigned', is_nullable = false}}
+    }}
+
+    local k = 1ULL
+    schema.spaces.test.format[2][k] = 'forbidden-cdata'
+    local res, err = ddl.set_schema(schema)
+    t.assert_equals(res, nil)
+    t.assert_equals(err,
+        'spaces["test"].format["unsigned_nullable"]:' ..
+        ' bad key 1ULL (string expected, got cdata)'
+    )
+    schema.spaces.test.format[2][k] = nil
+
+    schema.spaces.test.format[1].scale = 'bananas'
+    local res, err = ddl.set_schema(schema)
+    t.assert_equals({res, err}, {true, nil})
+    t.assert_equals(ddl.get_schema(), schema)
+end
+
 function g.test_missing_indexes()
     local schema = {spaces = table.deepcopy(test_space)}
     schema.spaces.test.indexes = nil

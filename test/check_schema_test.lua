@@ -38,6 +38,8 @@ local test_space = {
         {name = 'double_null', type = 'double', is_nullable = true},
         {name = 'uuid_nonnull', type = 'uuid', is_nullable = false},
         {name = 'uuid_null', type = 'uuid', is_nullable = true},
+
+        {name = 'annotated', type = 'any', is_nullable = true, comment = 'x'},
     },
 }
 
