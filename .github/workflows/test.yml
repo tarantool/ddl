@@ -1,0 +1,41 @@
+name: Test
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ubuntu-20.04]
+        tarantool: ['1.10', '2.4', '2.5', '2.6', '2.7']
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@master
+      - uses: rosik/setup-tarantool@v1
+        with:
+          tarantool-version: ${{ matrix.tarantool }}
+
+      # Setup luatest and luacheck
+      - name: Cache rocks
+        uses: actions/cache@v2
+        id: cache-rocks
+        with:
+          path: .rocks/
+          key: cache-rocks-${{ matrix.runs-on }}-01
+      -
+        run: tarantoolctl rocks install luacheck
+        if: steps.cache-rocks.outputs.cache-hit != 'true'
+      -
+        run: tarantoolctl rocks install luatest
+        if: steps.cache-rocks.outputs.cache-hit != 'true'
+      - run: echo $PWD/.rocks/bin >> $GITHUB_PATH
+
+      - run: luacheck .
+      - run: tarantoolctl rocks make
+      - run: luatest -v
+
+      # Cleanup cached paths
+      - run: tarantoolctl rocks remove ddl
