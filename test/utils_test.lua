@@ -3,7 +3,7 @@
 local t = require('luatest')
 local ddl_utils = require('ddl.utils')
 
-local g = t.group('utils')
+local g = t.group()
 
 function g.test_is_array()
     t.assert(ddl_utils.is_array({}))

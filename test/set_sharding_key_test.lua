@@ -4,7 +4,7 @@ local t = require('luatest')
 local db = require('test.db')
 local ddl = require('ddl')
 
-local g = t.group('set_sharding_key')
+local g = t.group()
 local test_space = {
     engine = 'memtx',
     is_local = true,
@@ -53,8 +53,8 @@ local sharding_key_format = {
     {name = 'sharding_key', type = 'array', is_nullable = false}
 }
 
-g.before_all = db.init
-g.setup = function()
+g.before_all(db.init)
+g.before_each(function()
     db.drop_all()
 
     g.space = table.deepcopy(test_space)
@@ -70,7 +70,7 @@ g.setup = function()
     g.schema = {spaces = {
         space = g.space,
     }}
-end
+end)
 
 local function normalize_rows(rows)
     local normalized = {}
