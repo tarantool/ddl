@@ -1,5 +1,3 @@
-#!/usr/bin/env tarantool
-
 local ffi = require('ffi')
 
 local function deepcmp(got, expected, extra)

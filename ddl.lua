@@ -1,5 +1,3 @@
-#!/usr/bin/env tarantool
-
 local ddl_get = require('ddl.get')
 local ddl_set = require('ddl.set')
 local ddl_check = require('ddl.check')

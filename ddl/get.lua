@@ -1,5 +1,3 @@
-#!/usr/bin/env tarantool
-
 local function _get_index_field_path(space, index_part)
     local space_field = space:format()[index_part.fieldno]
 

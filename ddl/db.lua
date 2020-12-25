@@ -1,5 +1,3 @@
-#!/usr/bin/env tarantool
-
 local function check_version(expected_major, expected_minor)
     local db_major, db_minor = string.match(_TARANTOOL, '^(%d+)%.(%d+)')
     local major, minor = tonumber(db_major), tonumber(db_minor)

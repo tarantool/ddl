@@ -1,5 +1,3 @@
-#!/usr/bin/env tarantool
-
 local utils = require('ddl.utils')
 local db = require('ddl.db')
 
