@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Allow custom fields in space format
+- Forbid redundant keys in schema top-level and make `spaces` table
+  mandatory. So the only valid schema format now is `{spaces = {...}}`.
 
 ## [1.2.0] - 2020-07-20
 

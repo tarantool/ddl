@@ -13,15 +13,27 @@ local function check_schema_format(schema)
         )
     end
 
-    local spaces = schema.spaces
-    if spaces == nil then
-        spaces = {}
+    if type(schema.spaces) ~= 'table' then
+        return nil, string.format(
+            "spaces: must be a table, got %s", type(schema.spaces)
+        )
     end
 
-    if type(spaces) ~= 'table' then
-        return nil, string.format(
-            "spaces: must be a table, got %s", type(spaces)
-        )
+    if type(schema.functions) ~= 'nil' then
+        return nil, string.format("functions: not supported")
+    end
+
+    if type(schema.sequences) ~= 'nil' then
+        return nil, string.format("sequences: not supported")
+    end
+
+    do -- check redundant keys
+        local k = utils.redundant_key(schema, {'spaces'})
+        if k ~= nil then
+            return nil, string.format(
+                "Invalid schema: redundant key %q", k
+            )
+        end
     end
 
     return true
@@ -33,11 +45,6 @@ local function check_schema(schema)
         return nil, err
     end
 
-    local spaces = schema.spaces
-    if spaces == nil then
-        spaces = {}
-    end
-
     if type(box.cfg) == 'function' then
         return nil, "'box' module isn't configured yet"
     end
@@ -46,7 +53,7 @@ local function check_schema(schema)
         return nil, "Instance is read-only (box.cfg.read_only=true)"
     end
 
-    for space_name, space_schema in pairs(spaces) do
+    for space_name, space_schema in pairs(schema.spaces) do
         local ok, err = ddl_check.check_space(space_name, space_schema)
         if not ok then
             return nil, err
@@ -88,11 +95,6 @@ local function set_schema(schema)
         return nil, err
     end
 
-    local spaces = schema.spaces
-    if spaces == nil then
-        spaces = {}
-    end
-
     local ok, err = check_schema(schema)
     if not ok then
         return nil, err
@@ -114,7 +116,7 @@ local function set_schema(schema)
         }
     )
 
-    for space_name, space_schema in pairs(spaces) do
+    for space_name, space_schema in pairs(schema.spaces) do
         if box.space[space_name] == nil then
             ddl_set.create_space(space_name, space_schema)
         end
@@ -125,7 +127,6 @@ end
 
 
 local function get_schema()
-    local schema = {}
     local spaces = {}
     for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GT"}) do
         if space.name ~= '_ddl_sharding_key' then
@@ -133,8 +134,9 @@ local function get_schema()
         end
     end
 
-    schema.spaces = spaces
-    return schema
+    return {
+        spaces = spaces,
+    }
 end
 
 return {

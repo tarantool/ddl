@@ -103,12 +103,6 @@ local function assert_error_msg_contains(err_msg, expected, level)
     end
 end
 
-function g.test_empty_spaces_schema()
-    local res, err = ddl.set_schema({})
-    t.assert_not(err)
-    t.assert(res)
-end
-
 function g.test_invalid_schema()
     local res, err = ddl.set_schema(nil)
     t.assert_not(res)
@@ -122,10 +116,40 @@ function g.test_invalid_schema()
     t.assert_not(res)
     t.assert_equals(err, 'Invalid schema (table expected, got boolean)')
 
+    local res, err = ddl.set_schema({})
+    t.assert_not(res)
+    t.assert_equals(err,
+        'spaces: must be a table, got nil'
+    )
+
     local res, err = ddl.set_schema({spaces = 5})
     t.assert_not(res)
     t.assert_equals(err,
         'spaces: must be a table, got number'
+    )
+
+    local res, err = ddl.set_schema({spaces = box.NULL})
+    t.assert_not(res)
+    t.assert_equals(err,
+        'spaces: must be a table, got cdata'
+    )
+
+    local res, err = ddl.set_schema({spaces = {}, functions = {}})
+    t.assert_not(res)
+    t.assert_equals(err,
+        'functions: not supported'
+    )
+
+    local res, err = ddl.set_schema({spaces = {}, sequences = {}})
+    t.assert_not(res)
+    t.assert_equals(err,
+        'sequences: not supported'
+    )
+
+    local res, err = ddl.set_schema({spaces = {}, meta = {}})
+    t.assert_not(res)
+    t.assert_equals(err,
+        'Invalid schema: redundant key "meta"'
     )
 
     local res, err = ddl.set_schema({spaces = {[1] = test_space.test}})
@@ -140,6 +164,9 @@ function g.test_invalid_schema()
         'spaces["space"]: bad value (table expected, got number)'
     )
 end
+
+-- Indexes -------------------------------------------------------------
+------------------------------------------------------------------------
 
 function g.test_hash_index()
     local pk = {
@@ -279,7 +306,6 @@ function g.test_tree_index()
     }})
 end
 
-
 function g.test_bitset_index()
     local pk  = {
         type = 'HASH',
@@ -406,7 +432,6 @@ function g.test_bitset_index()
     )
 end
 
-
 function g.test_rtree_index()
     local pk  = {
         type = 'TREE',
@@ -517,6 +542,20 @@ function g.test_rtree_index()
     )
 end
 
+function g.test_missing_indexes()
+    local schema = {spaces = table.deepcopy(test_space)}
+    schema.spaces.test.indexes = nil
+
+
+    local res, err =  ddl.set_schema(schema)
+    t.assert_not(res)
+    assert_error_msg_contains(err,
+        [[spaces["test"].indexes: bad value (contiguous array expected, got nil)]]
+    )
+end
+
+-- Index parts ---------------------------------------------------------
+------------------------------------------------------------------------
 
 function g.test_path()
     local pk = {
@@ -625,7 +664,6 @@ function g.test_path()
         [[ referencing to unknown field]]
     )
 end
-
 
 function g.test_multikey_path()
     local pk = {
@@ -872,6 +910,9 @@ function g.test_missing_ddl_index_parts()
     )
 end
 
+-- Space format --------------------------------------------------------
+------------------------------------------------------------------------
+
 function g.test_missing_format()
     local schema = {spaces = table.deepcopy(test_space)}
     schema.spaces.test.format = nil
@@ -914,19 +955,6 @@ function g.test_annotated_format()
     t.assert_equals({res, err}, {true, nil})
     t.assert_equals(ddl.get_schema(), schema)
 end
-
-function g.test_missing_indexes()
-    local schema = {spaces = table.deepcopy(test_space)}
-    schema.spaces.test.indexes = nil
-
-
-    local res, err =  ddl.set_schema(schema)
-    t.assert_not(res)
-    assert_error_msg_contains(err,
-        [[spaces["test"].indexes: bad value (contiguous array expected, got nil)]]
-    )
-end
-
 
 function g.test_two_spaces()
     local spaces = {
@@ -971,7 +999,6 @@ function g.test_two_spaces()
     local ddl_schema = ddl.get_schema()
     t.assert_equals(ddl_schema, schema)
 end
-
 
 function g.test_error_spaces()
     local spaces = {
@@ -1064,7 +1091,6 @@ function g.test_set_schema_sequently_err()
     local res = ddl.get_schema()
     t.assert_equals(res, old_schema)
 end
-
 
 function g.test_set_schema_sequently_ok()
     local old_schema = {spaces = table.deepcopy(test_space)}
