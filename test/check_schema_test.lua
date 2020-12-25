@@ -3,6 +3,7 @@
 local t = require('luatest')
 local db = require('test.db')
 local ddl_check = require('ddl.check')
+local ddl = require('ddl')
 
 local g = t.group()
 g.before_all(db.init)
@@ -1291,4 +1292,77 @@ function g.test_ro_schema()
     local res, err = ddl_check.check_space('space', space)
     t.assert_not(err)
     t.assert(res)
+end
+
+function g.test_memtx_and_vinyl()
+    local function get_test_space(engine)
+        local space = {
+            engine = engine,
+            is_local = true,
+            temporary = false,
+            format = {
+                {name = 'unsigned_nonnull', type = 'unsigned', is_nullable = false},
+            },
+            indexes = {{
+                name = 'pk',
+                type = 'TREE',
+                parts = {
+                    {path = 'unsigned_nonnull', type = 'unsigned', is_nullable = false},
+                },
+                unique = true,
+            }},
+        }
+
+        return space
+    end
+
+    local memtx_space = get_test_space('memtx')
+    local vinyl_space = get_test_space('vinyl')
+
+    local res, err = ddl.check_schema({spaces = {memtx_space = memtx_space, vinyl_space = vinyl_space}})
+    t.assert_equals(err, nil)
+    t.assert_equals(res, true)
+end
+
+function g.test_transactional_ddl()
+    if not db.v(2, 2) then
+        t.skip('No transactional ddl support in this tarantool')
+    end
+
+    local function get_test_space()
+        return {
+            engine = 'memtx',
+            is_local = false,
+            temporary = false,
+            format = {
+                {name = 'id', type = 'unsigned', is_nullable = false},
+            },
+            indexes = {{
+                name = 'pk',
+                type = 'TREE',
+                parts = {{path = 'id', type = 'unsigned', is_nullable = false}},
+                unique = true,
+            }, {
+                name = 'sk',
+                type = 'TREE',
+                parts = {{path = 'id', type = 'unsigned', is_nullable = false}},
+                unique = false,
+            }},
+        }
+    end
+
+    local lsn1 = box.info.lsn
+
+    local spaces = {
+        s1 = get_test_space(),
+        s2 = get_test_space(),
+    }
+    local res, err = ddl.check_schema({spaces = spaces})
+    t.assert_equals(err, nil)
+    t.assert_equals(res, true)
+
+    local lsn2 = box.info.lsn
+
+    t.assert_equals(lsn2, lsn1)
+    t.assert_not(box.is_in_txn())
 end

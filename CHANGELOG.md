@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Use transactional ddl when applying schema
+
 ## [1.3.0] - 2020-12-25
 
 ### Added

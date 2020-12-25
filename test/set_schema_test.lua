@@ -1231,3 +1231,57 @@ function g.test_tarantool_2_4_types()
     t.assert_equals(err, nil)
     t.assert_equals(ok, true)
 end
+
+function g.test_transactional_ddl()
+    if not db.v(2, 2) then
+        t.skip('No transactional ddl support in this tarantool')
+    end
+
+    -- Cause ddl.set_schema failure
+    local trigger = function(_, new)
+        if box.space[new.id].name ~= '_ddl_dummy'
+        and new.name == 'doomed'
+        then
+            error('Index creation is doomed', 0)
+        end
+    end
+    box.space._index:on_replace(trigger)
+
+    local lsn1 = box.info.lsn
+
+    local spaces = {
+        test = {
+            engine = 'memtx',
+            is_local = true,
+            temporary = false,
+            format = {
+                {name = 'id', type = 'unsigned', is_nullable = false},
+                {name = 'bucket_id', is_nullable = false, type = 'unsigned'},
+            },
+            indexes = {{
+                name = 'doomed',
+                type = 'TREE',
+                parts = {{path = 'id', type = 'unsigned', is_nullable = false}},
+                unique = true,
+            }, {
+                name = 'bucket_id',
+                type = 'TREE',
+                unique = false,
+                parts = {{path = 'bucket_id', is_nullable = false, type = 'unsigned'}}
+            }},
+            sharding_key = {'id'},
+        }
+    }
+
+    t.assert_error_msg_equals(
+        'spaces["test"].indexes["doomed"]: Index creation is doomed',
+        ddl.set_schema, {spaces = spaces}
+    )
+
+    local lsn2 = box.info.lsn
+
+    t.assert_equals(lsn2, lsn1)
+    t.assert_not(box.is_in_txn())
+
+    box.space._index:on_replace(nil, trigger)
+end

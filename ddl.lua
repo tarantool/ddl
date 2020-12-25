@@ -1,6 +1,7 @@
 local ddl_get = require('ddl.get')
 local ddl_set = require('ddl.set')
 local ddl_check = require('ddl.check')
+local ddl_db = require('ddl.db')
 local utils = require('ddl.utils')
 
 local function check_schema_format(schema)
@@ -37,20 +38,7 @@ local function check_schema_format(schema)
     return true
 end
 
-local function check_schema(schema)
-    local ok, err = check_schema_format(schema)
-    if not ok then
-        return nil, err
-    end
-
-    if type(box.cfg) == 'function' then
-        return nil, "'box' module isn't configured yet"
-    end
-
-    if box.cfg.read_only then
-        return nil, "Instance is read-only (check box.cfg.read_only and box.info.status)"
-    end
-
+local function _check_schema(schema)
     for space_name, space_schema in pairs(schema.spaces) do
         local ok, err = ddl_check.check_space(space_name, space_schema)
         if not ok then
@@ -87,17 +75,56 @@ local function check_schema(schema)
     return true
 end
 
-local function set_schema(schema)
+local function atomic_tail(status, ...)
+    if not status then
+        box.rollback()
+        error((...), 2)
+     end
+     box.commit()
+     return ...
+end
+
+local function call_atomic(fun, ...)
+    if ddl_db.transactional_ddl_allowed() then
+        box.begin()
+    end
+    return atomic_tail(pcall(fun, ...))
+end
+
+local function dry_run_tail(status, ...)
+    if not status then
+        box.rollback()
+        error((...), 2)
+     end
+     box.rollback()
+     return ...
+end
+
+local function call_dry_run(fun, ...)
+    if ddl_db.transactional_ddl_allowed() then
+        box.begin()
+    end
+    return dry_run_tail(pcall(fun, ...))
+end
+
+local function check_schema(schema)
     local ok, err = check_schema_format(schema)
     if not ok then
         return nil, err
     end
 
-    local ok, err = check_schema(schema)
-    if not ok then
-        return nil, err
+    if type(box.cfg) == 'function' then
+        return nil, "'box' module isn't configured yet"
     end
 
+    if box.cfg.read_only then
+        return nil, "Instance is read-only (check box.cfg.read_only and box.info.status)"
+    end
+
+    return call_dry_run(_check_schema, schema)
+end
+
+local function _set_schema(schema)
     local sharding_space = box.schema.space.create('_ddl_sharding_key', {
         format = {
             {name = 'space_name', type = 'string', is_nullable = false},
@@ -105,6 +132,7 @@ local function set_schema(schema)
         },
         if_not_exists = true
     })
+
     sharding_space:create_index(
         'space_name', {
             type = 'TREE',
@@ -123,6 +151,19 @@ local function set_schema(schema)
     return true
 end
 
+local function set_schema(schema)
+    local ok, err = check_schema_format(schema)
+    if not ok then
+        return nil, err
+    end
+
+    local ok, err = check_schema(schema)
+    if not ok then
+        return nil, err
+    end
+
+    return call_atomic(_set_schema, schema)
+end
 
 local function get_schema()
     local spaces = {}

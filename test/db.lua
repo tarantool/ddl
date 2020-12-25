@@ -6,10 +6,8 @@ local tempdir = fio.tempdir()
 
 local function init()
     box.cfg{
-        wal_mode = 'none',
         work_dir = tempdir,
     }
-    fio.rmtree(tempdir)
 end
 
 local function drop_all()

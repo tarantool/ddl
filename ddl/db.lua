@@ -26,8 +26,14 @@ local function varbinary_allowed()
     return check_version(2, 2)
 end
 
+-- https://github.com/tarantool/tarantool/issues/4083
+local function transactional_ddl_allowed()
+    return check_version(2, 2)
+end
+
 return {
     json_path_allowed = json_path_allowed,
     varbinary_allowed = varbinary_allowed,
     multikey_path_allowed = multikey_path_allowed,
+    transactional_ddl_allowed = transactional_ddl_allowed,
 }
