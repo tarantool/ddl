@@ -1,8 +1,12 @@
 #!/usr/bin/env tarantool
 
 local fio = require('fio')
+local t = require('luatest')
 
 local tempdir = fio.tempdir()
+t.after_suite(function()
+    fio.rmtree(tempdir)
+end)
 
 local function init()
     box.cfg{
