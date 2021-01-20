@@ -1231,3 +1231,81 @@ function g.test_tarantool_2_4_types()
     t.assert_equals(err, nil)
     t.assert_equals(ok, true)
 end
+
+function g.test_transactional_ddl()
+    local spaces = {
+        test = {
+            engine = 'memtx',
+            is_local = true,
+            temporary = false,
+            format = {
+                {name = 'id', type = 'unsigned', is_nullable = false},
+                {name = 'bucket_id', is_nullable = false, type = 'unsigned'},
+            },
+            indexes = {{
+                name = 'doomed',
+                type = 'TREE',
+                parts = {{path = 'id', type = 'unsigned', is_nullable = false}},
+                unique = true,
+            }, {
+                name = 'bucket_id',
+                type = 'TREE',
+                unique = false,
+                parts = {{path = 'bucket_id', is_nullable = false, type = 'unsigned'}}
+            }},
+            sharding_key = {'id'},
+        }
+    }
+
+    -- Cause ddl.check_schema failure
+    local function dummy_failure(_, new)
+        if box.space[new.id].name == '_ddl_dummy'
+        and new.name == 'doomed'
+        then
+            error('Dummy index creation is doomed', 0)
+        end
+    end
+
+    -- Cause ddl.set_schema failure
+    local function actual_failure(_, new)
+        if box.space[new.id].name ~= '_ddl_dummy'
+        and new.name == 'doomed'
+        then
+            error('Actual index creation is doomed', 0)
+        end
+    end
+
+    local lsn1 = box.info.lsn
+
+    box.space._index:on_replace(dummy_failure)
+
+    t.assert_equals(
+        {ddl.set_schema({spaces = spaces})},
+        {nil, 'spaces["test"].indexes["doomed"]: Dummy index creation is doomed'}
+    )
+
+    local lsn2 = box.info.lsn
+    if db.v(2, 2) then
+        t.assert_equals(lsn2, lsn1)
+    else
+        t.assert_not_equals(lsn2, lsn1)
+    end
+    t.assert_not(box.is_in_txn())
+
+    box.space._index:on_replace(actual_failure, dummy_failure)
+
+    t.assert_error_msg_equals(
+        'spaces["test"].indexes["doomed"]: Actual index creation is doomed',
+        function() ddl.set_schema({spaces = spaces}) end
+    )
+
+    local lsn3 = box.info.lsn
+    if db.v(2, 2) then
+        t.assert_equals(lsn3, lsn2)
+    else
+        t.assert_not_equals(lsn3, lsn2)
+    end
+    t.assert_not(box.is_in_txn())
+
+    box.space._index:on_replace(nil, actual_failure)
+end

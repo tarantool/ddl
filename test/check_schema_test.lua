@@ -3,6 +3,7 @@
 local t = require('luatest')
 local db = require('test.db')
 local ddl_check = require('ddl.check')
+local ddl = require('ddl')
 
 local g = t.group()
 g.before_all(db.init)
@@ -1291,4 +1292,103 @@ function g.test_ro_schema()
     local res, err = ddl_check.check_space('space', space)
     t.assert_not(err)
     t.assert(res)
+end
+
+function g.test_memtx_and_vinyl()
+    local function get_test_space(engine)
+        local space = {
+            engine = engine,
+            is_local = true,
+            temporary = false,
+            format = {
+                {name = 'unsigned_nonnull', type = 'unsigned', is_nullable = false},
+            },
+            indexes = {{
+                name = 'pk',
+                type = 'TREE',
+                parts = {
+                    {path = 'unsigned_nonnull', type = 'unsigned', is_nullable = false},
+                },
+                unique = true,
+            }},
+        }
+
+        return space
+    end
+
+    local memtx_space = get_test_space('memtx')
+    local vinyl_space = get_test_space('vinyl')
+
+    local res, err = ddl.check_schema({spaces = {memtx_space = memtx_space, vinyl_space = vinyl_space}})
+    t.assert_equals(err, nil)
+    t.assert_equals(res, true)
+end
+
+function g.test_transactional_ddl()
+    local function get_test_space()
+        return {
+            engine = 'memtx',
+            is_local = false,
+            temporary = false,
+            format = {
+                {name = 'id', type = 'unsigned', is_nullable = false},
+            },
+            indexes = {{
+                name = 'pk',
+                type = 'TREE',
+                parts = {{path = 'id', type = 'unsigned', is_nullable = false}},
+                unique = true,
+            }, {
+                name = 'sk',
+                type = 'TREE',
+                parts = {{path = 'id', type = 'unsigned', is_nullable = false}},
+                unique = false,
+            }},
+        }
+    end
+    local spaces = {
+        s1 = get_test_space(),
+        s2 = get_test_space(),
+    }
+
+    local _check_space = ddl_check.check_space
+    local cnt = 0
+    ddl_check.check_space = function(...)
+        -- It's important to make at least 1 transaction
+        -- before simulating a failure
+        cnt = cnt + 1
+        if cnt < 2 then
+            return _check_space(...)
+        else
+            error('Everybody lies', 0)
+        end
+    end
+
+    local lsn1 = box.info.lsn
+
+    -- The transaction must always be rolled back.
+    -- Even in case of a bug in the code.
+    t.assert_error_msg_equals('Everybody lies', function()
+        ddl.check_schema({spaces = spaces})
+    end)
+
+    local lsn2 = box.info.lsn
+    if db.v(2, 2) then
+        t.assert_equals(lsn2, lsn1)
+    else
+        t.assert_not_equals(lsn2, lsn1)
+    end
+    t.assert_not(box.is_in_txn())
+
+    -- Fix the bug and try again, transaction is still rolled back
+    ddl_check.check_space = _check_space
+    t.assert_equals({ddl.check_schema({spaces = spaces})}, {true, nil})
+
+    local lsn3 = box.info.lsn
+    if db.v(2, 2) then
+        t.assert_equals(lsn3, lsn2)
+    else
+        t.assert_not_equals(lsn3, lsn2)
+    end
+    t.assert_not(box.is_in_txn())
 end
