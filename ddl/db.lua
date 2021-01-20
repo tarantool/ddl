@@ -31,9 +31,44 @@ local function transactional_ddl_allowed()
     return check_version(2, 2)
 end
 
+local function atomic_tail(status, ...)
+    if not status then
+        box.rollback()
+        error((...), 0)
+    end
+    box.commit()
+    return ...
+end
+
+local function call_atomic(fun, ...)
+    if transactional_ddl_allowed() then
+        box.begin()
+    end
+    return atomic_tail(pcall(fun, ...))
+end
+
+local function dry_run_tail(status, ...)
+    if not status then
+        box.rollback()
+        error((...), 0)
+    end
+    box.rollback()
+    return ...
+end
+
+local function call_dry_run(fun, ...)
+    if transactional_ddl_allowed() then
+        box.begin()
+    end
+    return dry_run_tail(pcall(fun, ...))
+end
+
 return {
     json_path_allowed = json_path_allowed,
     varbinary_allowed = varbinary_allowed,
     multikey_path_allowed = multikey_path_allowed,
     transactional_ddl_allowed = transactional_ddl_allowed,
+
+    call_atomic = call_atomic,
+    call_dry_run = call_dry_run,
 }

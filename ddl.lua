@@ -75,38 +75,6 @@ local function _check_schema(schema)
     return true
 end
 
-local function atomic_tail(status, ...)
-    if not status then
-        box.rollback()
-        error((...), 2)
-     end
-     box.commit()
-     return ...
-end
-
-local function call_atomic(fun, ...)
-    if ddl_db.transactional_ddl_allowed() then
-        box.begin()
-    end
-    return atomic_tail(pcall(fun, ...))
-end
-
-local function dry_run_tail(status, ...)
-    if not status then
-        box.rollback()
-        error((...), 2)
-     end
-     box.rollback()
-     return ...
-end
-
-local function call_dry_run(fun, ...)
-    if ddl_db.transactional_ddl_allowed() then
-        box.begin()
-    end
-    return dry_run_tail(pcall(fun, ...))
-end
-
 local function check_schema(schema)
     local ok, err = check_schema_format(schema)
     if not ok then
@@ -121,7 +89,7 @@ local function check_schema(schema)
         return nil, "Instance is read-only (check box.cfg.read_only and box.info.status)"
     end
 
-    return call_dry_run(_check_schema, schema)
+    return ddl_db.call_dry_run(_check_schema, schema)
 end
 
 local function _set_schema(schema)
@@ -162,7 +130,7 @@ local function set_schema(schema)
         return nil, err
     end
 
-    return call_atomic(_set_schema, schema)
+    return ddl_db.call_atomic(_set_schema, schema)
 end
 
 local function get_schema()
