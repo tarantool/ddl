@@ -48,7 +48,7 @@ local function check_schema(schema)
     end
 
     if box.cfg.read_only then
-        return nil, "Instance is read-only (box.cfg.read_only=true)"
+        return nil, "Instance is read-only (check box.cfg.read_only and box.info.status)"
     end
 
     for space_name, space_schema in pairs(schema.spaces) do
