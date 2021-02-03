@@ -31,6 +31,8 @@ jobs:
       -
         run: tarantoolctl rocks install luatest
         if: steps.cache-rocks.outputs.cache-hit != 'true'
+      -
+        run: tarantoolctl rocks install cartridge
       - run: echo $PWD/.rocks/bin >> $GITHUB_PATH
 
       - run: luacheck .
@@ -38,4 +40,5 @@ jobs:
       - run: luatest -v
 
       # Cleanup cached paths
+      - run: tarantoolctl rocks remove cartridge
       - run: tarantoolctl rocks remove ddl
