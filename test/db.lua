@@ -10,7 +10,9 @@ end)
 
 local function init()
     box.cfg{
-        work_dir = tempdir,
+        memtx_dir = tempdir,
+        vinyl_dir = tempdir,
+        wal_dir = tempdir,
     }
 end
 

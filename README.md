@@ -17,7 +17,7 @@ DDL module for Tarantool 1.10+
 
 ## API
 
- - ### Set spaces format
+### Set spaces format
     `ddl.set_schema(schema)`
     - If no spaces existed before, create them.
     - If a space exists, check the space's format and indexes.
@@ -28,13 +28,13 @@ DDL module for Tarantool 1.10+
 
     Return values: `true` if no error, otherwise return `nil, err`
 
-  - ### Check compatibility
+### Check compatibility
     `ddl.check_schema(schema)`
     - Check that a `set_schema()` call will raise no error.
 
     Return values: `true` if no error, otherwise return `nil, err`
 
-  - ### Get spaces format
+### Get spaces format
     `ddl.get_schema()`
     - Scan spaces and return the database schema.
 

@@ -8,13 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- Use transactional ddl when applying schema
+- Use transactional ddl when applying schema.
+- Transfer "ddl-manager" role from the cartridge repo.
 
 ## [1.3.0] - 2020-12-25
 
 ### Added
 
-- Allow custom fields in space format
+- Allow custom fields in space format.
 - Forbid redundant keys in schema top-level and make `spaces` table
   mandatory. So the only valid schema format now is `{spaces = {...}}`.
 

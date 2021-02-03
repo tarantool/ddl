@@ -37,6 +37,11 @@ install(
   DESTINATION ${TARANTOOL_INSTALL_LUADIR}/
 )
 
+install(
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/cartridge/roles/ddl-manager.lua
+  DESTINATION ${TARANTOOL_INSTALL_LUADIR}/cartridge/roles/
+)
+
 file(GLOB_RECURSE LUA_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/ddl/*.lua"
 )
