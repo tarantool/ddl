@@ -1,15 +1,17 @@
-local fio = require('fio')
 local t = require('luatest')
 local g = t.group()
 
+local fio = require('fio')
 local yaml = require('yaml')
 local helpers = require('test.helper')
-local ddl_manager = require('cartridge.roles.ddl-manager')
-
-math.randomseed(os.time())
 
 g.before_all(function()
-    g.cluster = helpers.Cluster:new({
+    t.skip_if(
+        not pcall(require, 'cartridge'),
+        'cartridge not installed'
+    )
+
+    g.cluster = require('cartridge.test-helpers').Cluster:new({
         datadir = fio.tempdir(),
         server_command = helpers.entrypoint('srv_basic'),
         replicasets = {{
@@ -38,6 +40,7 @@ g.after_all(function()
 end)
 
 local function get_section()
+    local ddl_manager = require('cartridge.roles.ddl-manager')
     return g.s1.net_box:call(
         'package.loaded.cartridge.config_get_readonly',
         {ddl_manager._section_name}

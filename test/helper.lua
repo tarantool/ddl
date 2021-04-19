@@ -1,16 +1,8 @@
 require('strict').on()
 
-local log = require('log')
-local digest = require('digest')
 local fio = require('fio')
-
-local ok, cartridge_helpers = pcall(require, 'cartridge.test-helpers')
-if not ok then
-    log.error('Please, install cartridge rock to run tests')
-    os.exit(1)
-end
-
-local helpers = table.copy(cartridge_helpers)
+local digest = require('digest')
+local helpers = table.copy(require('luatest').helpers)
 
 helpers.project_root = fio.dirname(debug.sourcedir())
 
