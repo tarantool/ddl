@@ -24,7 +24,7 @@ jobs:
         id: cache-rocks
         with:
           path: .rocks/
-          key: cache-rocks-${{ matrix.runs-on }}-01
+          key: cache-rocks-${{ matrix.runs-on }}-04
       -
         run: tarantoolctl rocks install luacheck
         if: steps.cache-rocks.outputs.cache-hit != 'true'
@@ -33,9 +33,16 @@ jobs:
         if: steps.cache-rocks.outputs.cache-hit != 'true'
       - run: echo $PWD/.rocks/bin >> $GITHUB_PATH
 
+      - run: tarantoolctl rocks list
+      - run: tarantoolctl rocks install cartridge
+        env:
+          CMAKE_DUMMY_WEBUI: true
+      - run: tarantoolctl rocks remove ddl --force
+
       - run: luacheck .
       - run: tarantoolctl rocks make
       - run: luatest -v
 
       # Cleanup cached paths
+      - run: tarantoolctl rocks remove cartridge
       - run: tarantoolctl rocks remove ddl
