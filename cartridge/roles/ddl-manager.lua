@@ -4,7 +4,13 @@ local yaml = require('yaml').new()
 local errors = require('errors')
 
 local cartridge = require('cartridge')
+local twophase = require('cartridge.twophase')
 local failover = require('cartridge.failover')
+local vars = require('cartridge.vars').new('cartridge.roles.ddl-manager')
+
+vars:new('on_patch_trigger', nil)
+vars:new('_section_name', nil)
+vars:new('_example_schema', nil)
 
 local CheckSchemaError = errors.new_class('CheckSchemaError')
 
@@ -14,8 +20,8 @@ yaml.cfg({
     decode_save_metatables = false,
 })
 
-local _section_name = 'schema.yml'
-local _example_schema = [[## Example:
+vars._section_name = 'schema.yml'
+vars._example_schema = [[## Example:
 #
 # spaces:
 #   customer:
@@ -47,12 +53,23 @@ local _example_schema = [[## Example:
 #         - {path: fullname, type: string, is_nullable: false}
 ]]
 
+-- Be gentle with cartridge.reload_roles
+twophase.on_patch(nil, vars.on_patch_trigger)
+function vars.on_patch_trigger(conf_new)
+    local schema_yml = conf_new:get_readonly(vars._section_name)
+
+    if schema_yml == nil or schema_yml == '' then
+        conf_new:set_plaintext(vars._section_name, vars._example_schema)
+    end
+end
+twophase.on_patch(vars.on_patch_trigger, nil)
+
 local function apply_config(conf, opts)
     if not opts.is_master then
         return true
     end
 
-    local schema_yml = conf[_section_name]
+    local schema_yml = conf[vars._section_name]
     if schema_yml == nil then
         return true
     end
@@ -69,7 +86,7 @@ local function apply_config(conf, opts)
 end
 
 local function validate_config(conf_new, _)
-    local schema_yml = conf_new[_section_name]
+    local schema_yml = conf_new[vars._section_name]
     if schema_yml == nil then
         return true
     end
@@ -111,18 +128,10 @@ end
 
 --- Get clusterwide schema as a YAML string.
 --
--- In case there's no schema set, return a commented out example.
---
 -- @function get_clusterwide_schema_yaml
 -- @treturn string yaml-encoded schema
 local function get_clusterwide_schema_yaml()
-    local schema_yml = cartridge.config_get_readonly(_section_name)
-
-    if schema_yml == nil or schema_yml == '' then
-        return _example_schema
-    else
-        return schema_yml
-    end
+    return cartridge.config_get_readonly(vars._section_name)
 end
 
 --- Get clusterwide schema as a Lua table.
@@ -132,7 +141,7 @@ end
 -- @function get_clusterwide_schema_lua
 -- @treturn table schema
 local function get_clusterwide_schema_lua()
-    local schema_yml = cartridge.config_get_readonly(_section_name)
+    local schema_yml = cartridge.config_get_readonly(vars._section_name)
     local schema_lua = schema_yml and yaml.decode(schema_yml)
     if schema_lua == nil then
         return {spaces = {}}
@@ -151,7 +160,7 @@ end
 local function set_clusterwide_schema_yaml(schema_yml)
     local patch
     if schema_yml == nil then
-        patch = {[_section_name] = box.NULL}
+        patch = {[vars._section_name] = box.NULL}
     elseif type(schema_yml) ~= 'string' then
         local err = string.format(
             'Bad argument #1 to set_clusterwide_schema_yaml' ..
@@ -159,7 +168,7 @@ local function set_clusterwide_schema_yaml(schema_yml)
         )
         error(err, 2)
     else
-        patch = {[_section_name] = schema_yml}
+        patch = {[vars._section_name] = schema_yml}
     end
 
     return cartridge.config_patch_clusterwide(patch)
@@ -175,7 +184,7 @@ end
 local function set_clusterwide_schema_lua(schema_lua)
     local patch
     if schema_lua == nil then
-        patch = {[_section_name] = box.NULL}
+        patch = {[vars._section_name] = box.NULL}
     elseif type(schema_lua) ~= 'table' then
         local err = string.format(
             'Bad argument #1 to set_clusterwide_schema_lua' ..
@@ -183,7 +192,7 @@ local function set_clusterwide_schema_lua(schema_lua)
         )
         error(err, 2)
     else
-        patch = {[_section_name] = yaml.encode(schema_lua)}
+        patch = {[vars._section_name] = yaml.encode(schema_lua)}
     end
 
     return cartridge.config_patch_clusterwide(patch)
@@ -267,8 +276,8 @@ end
 return {
     role_name = 'ddl-manager',
     permanent = true,
-    _section_name = _section_name,
-    _example_schema = _example_schema,
+    _section_name = vars._section_name,
+    _example_schema = vars._example_schema,
 
     init = init,
     stop = stop,
