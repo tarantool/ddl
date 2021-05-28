@@ -22,6 +22,7 @@ local function drop_all()
     end
 end
 
+-- Check if tarantool version >= required
 local function v(req_major, req_minor)
     req_minor = req_minor or 0
     assert(type(req_major) == 'number')

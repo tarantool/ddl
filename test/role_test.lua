@@ -70,7 +70,7 @@ function g.test_yaml()
 
     t.assert_str_matches(call('get_clusterwide_schema_yaml'), '## Example:\n.+')
     t.assert_equals(call('get_clusterwide_schema_lua'), {spaces = {}})
-    t.assert_equals(get_section(), '')
+    t.assert_equals(call('get_clusterwide_schema_yaml'), get_section())
 
     --------------------------------------------------------------------
     local schema = nil
@@ -81,7 +81,7 @@ function g.test_yaml()
 
     t.assert_str_matches(call('get_clusterwide_schema_yaml'), '## Example:\n.+')
     t.assert_equals(call('get_clusterwide_schema_lua'), {spaces = {}})
-    t.assert_equals(get_section(), nil)
+    t.assert_equals(call('get_clusterwide_schema_yaml'), get_section())
 
     --------------------------------------------------------------------
     local schema = ' '
@@ -103,7 +103,7 @@ function g.test_yaml()
 
     t.assert_str_matches(call('get_clusterwide_schema_yaml'), '## Example:\n.+')
     t.assert_equals(call('get_clusterwide_schema_lua'), {spaces = {}})
-    t.assert_equals(get_section(), nil)
+    t.assert_equals(call('get_clusterwide_schema_yaml'), get_section())
 
     --------------------------------------------------------------------
     local schema = 'null'
@@ -269,7 +269,7 @@ function g.test_lua()
 
     t.assert_equals(call('get_clusterwide_schema_lua'), {spaces = {}})
     t.assert_str_matches(call('get_clusterwide_schema_yaml'), '## Example:\n.+')
-    t.assert_equals(get_section(), nil)
+    t.assert_equals(call('get_clusterwide_schema_yaml'), get_section())
 
     --------------------------------------------------------------------
     local schema = {}

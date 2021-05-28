@@ -638,6 +638,17 @@ function g.test_path()
         }
     })
 
+    local error_expected
+    if db.v(2, 8) then
+        -- See: https://github.com/tarantool/tarantool/issues/4707
+        error_expected = 'spaces["test"].indexes["path_idx"]:' ..
+            " Field 1 (unsigned_nonnull) has type 'unsigned' in one index," ..
+            " but type 'map' in another"
+    else
+        error_expected = 'spaces["test"].indexes["path_idx"]:' ..
+            " Field 1 has type 'unsigned' in one index," ..
+            " but type 'map' in another"
+    end
     _test_index({
         {
             name = 'path_idx',
@@ -645,9 +656,7 @@ function g.test_path()
             unique = true,
             parts = {{path = 'unsigned_nonnull.DATA["name"]', type = 'unsigned', is_nullable = false}}
         }},
-        [[spaces["test"].indexes["path_idx"]: Field 1 has type 'unsigned' in one index, but type 'map' in another]]
-        -- [[spaces["test"].indexes["path_idx"].parts[1].path: path (unsigned_nonnull.DATA["name"])]] ..
-        -- [[ is json_path. It references to field[unsigned_nonnull] with type unsigned, but expected map]]
+        error_expected
     )
 
     _test_index({pk, {
@@ -718,6 +727,19 @@ function g.test_multikey_path()
         }
     }})
 
+
+
+    local error_expected
+    if db.v(2, 8) then
+        -- See: https://github.com/tarantool/tarantool/issues/4707
+        error_expected = 'spaces["test"].indexes["path_idx"]:' ..
+            " Field 15 (map_nonnull) has type 'map' in one index," ..
+            " but type 'array' in another"
+    else
+        error_expected = 'spaces["test"].indexes["path_idx"]:' ..
+            " Field 15 has type 'map' in one index," ..
+            " but type 'array' in another"
+    end
     _test_index({pk, {
             name = 'path_idx',
             type = 'TREE',
@@ -729,7 +751,7 @@ function g.test_multikey_path()
                 }
             }
         }},
-        [[spaces["test"].indexes["path_idx"]: Field 15 has type 'map' in one index, but type 'array' in another]]
+        error_expected
     )
 
     _test_index({
