@@ -17,7 +17,7 @@ local function init()
 end
 
 local function drop_all()
-	for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GT"}) do
+    for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GT"}) do
         box.space[space.name]:drop()
     end
 end
@@ -48,7 +48,7 @@ local function v(req_major, req_minor)
 end
 
 return {
-	init = init,
-	drop_all = drop_all,
+    init = init,
+    drop_all = drop_all,
     v = v,
 }
