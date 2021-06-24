@@ -28,6 +28,10 @@ DDL module for Tarantool 1.10+
 
     Return values: `true` if no error, otherwise return `nil, err`
 
+Additionally when a section `sharding_key` is not empty in YAML schema call of
+function `ddl.set_schema(schema)` creates a space `_ddl_sharding_key` with two
+fields: `space_name` with type `string` and `sharding_key` with type `array`.
+
 ### Check compatibility
     `ddl.check_schema(schema)`
     - Check that a `set_schema()` call will raise no error.
