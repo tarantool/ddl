@@ -648,7 +648,7 @@ local function check_sharding_key(space)
         return true
     end
 
-    do -- chek that format['bucket_id'] valid
+    do -- check that format['bucket_id'] valid
         if not space.fields.bucket_id then
             return nil, string.format(
                 "spaces[%q].format: sharding_key exists in the space, but there's" ..
@@ -665,7 +665,7 @@ local function check_sharding_key(space)
         end
     end
 
-    do -- check that inedxes['bucket_id'] valid
+    do -- check that indexes['bucket_id'] valid
         if not space.indexes.bucket_id then
             return nil, string.format(
                 "spaces[%q].indexes: sharding_key exists in the space, but there's" ..
