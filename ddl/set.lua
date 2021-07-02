@@ -1,13 +1,4 @@
 local function create_index(box_space, ddl_index)
-    -- if ddl_index.func ~= nil then
-    --     box.schema.func.create(ddl_index.func.name, {
-    --         body = ddl_index.func.body,
-    --         is_deterministic = ddl_index.func.is_deterministic,
-    --         is_sandboxed = ddl_index.is_sandboxed,
-    --         opts = ddl_index.func.opts,
-    --     })
-    -- end
-
     if ddl_index.parts == nil then
         error("index parts is nil")
     end
