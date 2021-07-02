@@ -23,18 +23,25 @@ add_test(
 )
 
 find_package(LuaTest)
-add_test(
-  NAME luatest
-  COMMAND ${LUATEST} -v --coverage .
+find_package(LuaCov)
+
+set(CODE_COVERAGE_REPORT "${PROJECT_SOURCE_DIR}/luacov.report.out")
+set(CODE_COVERAGE_STATS "${PROJECT_SOURCE_DIR}/luacov.stats.out")
+
+add_custom_target(luatest
+  COMMAND ${LUATEST} -v --coverage
+  BYPRODUCTS ${CODE_COVERAGE_STATS}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMENT "Run regression tests"
 )
 
-set(CODE_COVERAGE_DATA "${PROJECT_SOURCE_DIR}/luacov.report.out")
 add_custom_target(coverage
-                  COMMAND grep -A999 '^Summary' ${CODE_COVERAGE_DATA}
-                  DEPENDS test
-                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                  COMMENT "Generate code coverage report")
+  COMMAND ${LUACOV} ${PROJECT_SOURCE_DIR} && grep -A999 '^Summary' ${CODE_COVERAGE_REPORT}
+  DEPENDS ${CODE_COVERAGE_STATS}
+  BYPRODUCTS ${CODE_COVERAGE_REPORT}
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  COMMENT "Generate code coverage stats"
+)
 
 ## Install ####################################################################
 ###############################################################################
