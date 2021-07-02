@@ -4,3 +4,5 @@
 /build.luarocks
 /tmp
 .idea
+luacov.report.out
+luacov.stats.out
