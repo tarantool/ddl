@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Name and format of a space `_ddl_sharding_key` is a part of public API.
+
 ### Changed
 
 - If one applies an empty schema using the 'ddl-manager' role API,

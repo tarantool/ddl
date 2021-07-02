@@ -207,3 +207,40 @@ function g.test_apply_sequently()
     local ddl_schema = ddl.get_schema()
     t.assert_equals(ddl_schema, new_schema)
 end
+
+function g.test_ddl_sharding_key_space()
+    local space_one = table.deepcopy(g.space)
+    space_one.sharding_key = {
+        'unsigned_nonnull', 'integer_nonnull', 'string_nonnull'
+    }
+
+    local schema = {
+        spaces = {
+            space_one = space_one
+        }
+    }
+
+    local ok, err = ddl.set_schema(schema)
+    t.assert_equals(err, nil)
+    t.assert_equals(ok, true)
+
+    local _ddl_sharding_key = box.space['_ddl_sharding_key']
+    t.assert_not_equals(_ddl_sharding_key, nil)
+
+    local format = _ddl_sharding_key:format()
+    t.assert_equals(#format, 2)
+    t.assert_equals(format, {
+	    {is_nullable = false, name = "space_name", type = "string"},
+	    {is_nullable = false, name = "sharding_key", type = "array"},
+        })
+
+    t.assert_items_equals(
+        normalize_rows(_ddl_sharding_key:select()),
+        {
+            {'space_one', space_one.sharding_key}
+        }
+    )
+
+    local ddl_schema = ddl.get_schema()
+    t.assert_equals(ddl_schema, schema)
+end
