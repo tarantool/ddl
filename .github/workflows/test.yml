@@ -24,12 +24,15 @@ jobs:
         id: cache-rocks
         with:
           path: .rocks/
-          key: cache-rocks-${{ matrix.runs-on }}-04
+          key: cache-rocks-${{ matrix.runs-on }}-05
       -
         run: tarantoolctl rocks install luacheck
         if: steps.cache-rocks.outputs.cache-hit != 'true'
       -
         run: tarantoolctl rocks install luatest
+        if: steps.cache-rocks.outputs.cache-hit != 'true'
+      -
+        run: tarantoolctl rocks install luacov
         if: steps.cache-rocks.outputs.cache-hit != 'true'
       - run: echo $PWD/.rocks/bin >> $GITHUB_PATH
 
@@ -39,9 +42,14 @@ jobs:
           CMAKE_DUMMY_WEBUI: true
       - run: tarantoolctl rocks remove ddl --force
 
-      - run: luacheck .
       - run: tarantoolctl rocks make
-      - run: luatest -v
+      - run: cmake -S . -B build
+
+      - name: Run luacheck
+        run: make -C build luacheck
+
+      - name: Run tests and code coverage analysis
+        run: make -C build coverage
 
       # Cleanup cached paths
       - run: tarantoolctl rocks remove cartridge
