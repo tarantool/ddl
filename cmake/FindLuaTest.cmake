@@ -5,7 +5,7 @@ find_program(LUATEST luatest
 )
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LUATEST
+find_package_handle_standard_args(LuaTest
     REQUIRED_VARS LUATEST
 )
 

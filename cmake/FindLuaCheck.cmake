@@ -5,7 +5,7 @@ find_program(LUACHECK luacheck
 )
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LUACHECK
+find_package_handle_standard_args(LuaCheck
     REQUIRED_VARS LUACHECK
 )
 
