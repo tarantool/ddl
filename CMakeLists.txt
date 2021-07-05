@@ -16,9 +16,8 @@ include_directories(${TARANTOOL_INCLUDE_DIRS})
 enable_testing()
 
 find_package(LuaCheck)
-add_test(
-  NAME luacheck
-  COMMAND ${LUACHECK} .
+add_custom_target(luacheck
+  COMMAND ${LUACHECK} ${PROJECT_SOURCE_DIR}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
