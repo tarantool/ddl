@@ -9,7 +9,7 @@ DDL module for Tarantool 1.10+
 The DDL module enables you to describe data schema in a declarative YAML-based format.
 It is a simpler alternative to describing data schema in Lua and doesn't require having a deep knowledge of Lua.
 DDL is a built-in Cartridge module. See more details about Tarantool's data mode
-in [documementation](https://www.tarantool.io/en/doc/latest/book/box/data_model/#data-schema-description-using-the-ddl-module).
+in [documentation](https://www.tarantool.io/en/doc/latest/book/box/data_model/#data-schema-description-using-the-ddl-module).
 
 ## Contents
 
