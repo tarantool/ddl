@@ -1,5 +1,9 @@
 local ddl_get = require('ddl.get')
 
+local M = {
+    trigger_on_schema_change = nil,
+}
+
 local function create_index(box_space, ddl_index)
     if ddl_index.parts == nil then
         error("index parts is nil")
@@ -98,9 +102,17 @@ local function create_space(space_name, space_schema, opts)
         ddl_get.internal.space_ddl_cache = nil
     end
 
+    if M.trigger_on_schema_change ~= nil then
+        local ok = pcall(M.trigger_on_schema_change)
+        if not ok then
+            return nil, "Execution of trigger 'on_schema_change' is failed"
+        end
+    end
+
     return true
 end
 
 return {
     create_space = create_space,
+    internal = M,
 }

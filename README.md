@@ -17,6 +17,7 @@ in [documentation](https://www.tarantool.io/en/doc/latest/book/box/data_model/#d
   - [Set spaces format](#set-spaces-format)
   - [Check compatibility](#check-compatibility)
   - [Get spaces format](#get-spaces-format)
+  - [Set trigger on_schema_change](#set-trigger-on_schema_change)
 - [Input data format](#input-data-format)
 - [Building and testing](#building-and-testing)
 
@@ -243,6 +244,10 @@ local schema = {
     }
 }
 ```
+
+### Set trigger on_schema_change
+    `ddl.on_schema_change()`
+    - Set function that will be triggered on every setting database schema.
 
 ## Building and testing
 

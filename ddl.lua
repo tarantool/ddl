@@ -133,6 +133,15 @@ local function set_schema(schema)
     return ddl_db.call_atomic(_set_schema, schema)
 end
 
+local function on_schema_change(func)
+    if type(func) ~= 'function' then
+        return nil, string.format("Passed value is not a function - %s", type(func))
+    end
+    ddl_set.internal.trigger_on_schema_change = func
+
+    return true
+end
+
 local function get_schema()
     local spaces = {}
     for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GT"}) do
@@ -150,4 +159,5 @@ return {
     check_schema = check_schema,
     set_schema = set_schema,
     get_schema = get_schema,
+    on_schema_change = on_schema_change,
 }
