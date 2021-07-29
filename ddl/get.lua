@@ -1,3 +1,7 @@
+local M = {
+    space_ddl_cache = nil,
+}
+
 local function _get_index_field_path(space, index_part)
     local space_field = space:format()[index_part.fieldno]
 
@@ -65,6 +69,9 @@ local function get_space_schema(space_name)
     local box_space = box.space[space_name]
     assert(box_space ~= nil)
 
+    if M.space_ddl_cache ~= nil then
+        return M.space_ddl_cache
+    end
     local space_ddl = {}
     space_ddl.is_local = box_space.is_local
     space_ddl.temporary = box_space.temporary
@@ -84,9 +91,11 @@ local function get_space_schema(space_name)
         end
     end
     space_ddl.indexes = indexes
+    M.space_ddl_cache = space_ddl
     return space_ddl
 end
 
 return {
     get_space_schema = get_space_schema,
+    internal = M,
 }

@@ -3,6 +3,7 @@
 local t = require('luatest')
 local db = require('test.db')
 local ddl = require('ddl')
+local ddl_get = require('ddl.get')
 local log = require('log')
 
 local g = t.group()
@@ -1330,4 +1331,23 @@ function g.test_transactional_ddl()
     t.assert_not(box.is_in_txn())
 
     box.space._index:on_replace(nil, actual_failure)
+end
+
+function g.test_schema_cache_invalidation()
+    local spaces = {
+        ['test'] = table.deepcopy(test_space['test']),
+    }
+    local schema = {spaces = spaces}
+    local res, err = ddl.set_schema(schema)
+    t.assert(res)
+    t.assert_not(err)
+
+    local ddl_schema = ddl.get_schema()
+    t.assert_equals(ddl_schema, schema)
+    t.assert_equals(ddl_get.internal.space_ddl_cache, schema)
+
+    local res, err = ddl.set_schema(schema)
+    t.assert(res)
+    t.assert_not(err)
+    t.assert_equals(ddl_get.internal.space_ddl_cache, nil)
 end

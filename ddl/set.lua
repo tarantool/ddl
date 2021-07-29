@@ -1,3 +1,5 @@
+local ddl_get = require('ddl.get')
+
 local function create_index(box_space, ddl_index)
     if ddl_index.parts == nil then
         error("index parts is nil")
@@ -37,6 +39,15 @@ local function create_sharding_key(space_name, space)
     end
 
     box.space._ddl_sharding_key:insert{space_name, space.sharding_key}
+end
+
+local function is_schema_set(space_name)
+    local schema = ddl_get.get_space_schema(space_name)
+    if schema.spaces ~= nil then
+        return true
+    end
+
+    return false
 end
 
 local function create_space(space_name, space_schema, opts)
@@ -82,6 +93,11 @@ local function create_space(space_name, space_schema, opts)
             return nil, string.format("spaces[%q].sharding_key: %s", space_name, err)
         end
     end
+
+    if is_schema_set(space_name) then
+        ddl_get.internal.space_ddl_cache = nil
+    end
+
     return true
 end
 

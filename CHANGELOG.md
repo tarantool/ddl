@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- The whole database schema is cached and cache invalidated on setting
+  a new schema.
 - Name and format of a space `_ddl_sharding_key` is a part of public API.
 
 ### Changed
