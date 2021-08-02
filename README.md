@@ -39,6 +39,39 @@ in [documementation](https://www.tarantool.io/en/doc/latest/book/box/data_model/
 Call of function `ddl.set_schema(schema)` creates a space `_ddl_sharding_key` with two
 fields: `space_name` with type `string` and `sharding_key` with type `array`.
 
+Similarly for `sharding_func`: call of function `ddl.set_schema(schema)` creates
+a space `_ddl_sharding_func` with three fields: `space_name`, `sharding_func_name` and
+`sharding_func_body` with type string.
+
+If you want to use sharding function from some module, you need to require
+and set to `_G` the module with sharding function first. For example:
+to use sharding functions like
+[vshard.router.bucket_id_strcrc32](https://www.tarantool.io/doc/latest/reference/reference_rock/vshard/vshard_api/#router-api-bucket-id-strcrc32)
+and
+[vshard.router.bucket_id_mpcrc32](https://www.tarantool.io/doc/latest/reference/reference_rock/vshard/vshard_api/#router-api-bucket-id-mpcrc32)
+from `vshard` module you need to require `vshard` module.
+
+Also, you can pass your own sharding function by defining the function name in `_G`
+or by specifying lua code directly in `body` field:
+```lua
+sharding_func = {
+  body = 'function(key) return <...> end'
+}
+```
+
+Your defined sharding function in `_G` should have type `function`
+or `table` | `cdata` | `userdata` with `__call` metamethod.
+
+Defined function must have a prototype according to the following rules:
+
+**Parameters**
+
+key (number | table | string | boolean) – a sharding key.
+
+**Return value**
+
+bucket identifier (number)
+
 ### Check compatibility
     `ddl.check_schema(schema)`
     - Check that a `set_schema()` call will raise no error.
@@ -143,6 +176,8 @@ format = {
                 -- unsharded spaces must NOT have
                 -- field and index named 'bucket_id'
             },
+            sharding_func = 'dot.notation' | 'sharding_func_name_defined_in_G'
+                            {body = 'function(key) return <...> end'},
         },
         ...
     },
@@ -241,6 +276,7 @@ local schema = {
                 }
             }},
             sharding_key = {'customer_id'},
+            sharding_func = 'vshard.router.bucket_id_mpcrc32',
         }
     }
 }

@@ -31,12 +31,14 @@ local function create_index(box_space, ddl_index)
     return true
 end
 
-local function create_sharding_key(space_name, space)
-    if not space.sharding_key then
+local function create_metadata(space_name, metadata, metadata_name)
+    if not next(metadata) then
         return
     end
 
-    box.space._ddl_sharding_key:insert{space_name, space.sharding_key}
+    local metadata_space_name = string.format("_ddl_%s", metadata_name)
+
+    box.space[metadata_space_name]:insert{space_name, unpack(metadata, 1, table.maxn(metadata))}
 end
 
 local function create_space(space_name, space_schema, opts)
@@ -77,9 +79,24 @@ local function create_space(space_name, space_schema, opts)
     end
 
     if not is_dummy then
-        local ok, err = pcall(create_sharding_key, space_name, space_schema)
+        local ok, err = pcall(create_metadata, space_name, {space_schema.sharding_key}, "sharding_key")
         if not ok then
             return nil, string.format("spaces[%q].sharding_key: %s", space_name, err)
+        end
+
+        local sharding_func_body = nil
+        if type(space_schema.sharding_func) == 'table' then
+            sharding_func_body = space_schema.sharding_func.body
+        end
+
+        local sharding_func_name = nil
+        if type(space_schema.sharding_func) == 'string' then
+            sharding_func_name = space_schema.sharding_func
+        end
+
+        local ok, err = pcall(create_metadata, space_name, {sharding_func_name, sharding_func_body}, "sharding_func")
+        if not ok then
+            return nil, string.format("spaces[%q].sharding_func: %s", space_name, err)
         end
     end
     return true
