@@ -92,21 +92,38 @@ local function check_schema(schema)
     return ddl_db.call_dry_run(_check_schema, schema)
 end
 
-local function _set_schema(schema)
-    local sharding_space = box.schema.space.create('_ddl_sharding_key', {
-        format = {
-            {name = 'space_name', type = 'string', is_nullable = false},
-            {name = 'sharding_key', type = 'array', is_nullable = false}
-        },
+local function set_metadata_space(metadata_name, space_format)
+    local metadata_space_name = string.format("_ddl_%s", metadata_name)
+
+    local metadata_space = box.schema.space.create(metadata_space_name, {
+        format = space_format,
         if_not_exists = true
     })
 
-    sharding_space:create_index(
+    metadata_space:create_index(
         'space_name', {
             type = 'TREE',
             unique = true,
             parts = {{'space_name', 'string', is_nullable = false}},
             if_not_exists = true
+        }
+    )
+end
+
+local function _set_schema(schema)
+    set_metadata_space(
+        'sharding_key',
+        {
+            {name = 'space_name', type = 'string', is_nullable = false},
+            {name = 'sharding_key', type = 'array', is_nullable = false}
+        }
+    )
+    set_metadata_space(
+        'sharding_func',
+        {
+            {name = 'space_name', type = 'string', is_nullable = false},
+            {name = 'sharding_func_name', type = 'string', is_nullable = true},
+            {name = 'sharding_func_body', type = 'string', is_nullable = true},
         }
     )
 
@@ -136,7 +153,7 @@ end
 local function get_schema()
     local spaces = {}
     for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GT"}) do
-        if space.name ~= '_ddl_sharding_key' then
+        if space.name ~= '_ddl_sharding_key' and space.name ~= '_ddl_sharding_func' then
             spaces[space.name] = ddl_get.get_space_schema(space.name)
         end
     end

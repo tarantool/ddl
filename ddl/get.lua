@@ -52,12 +52,35 @@ local function _get_index(box_space, box_index)
     return ddl_index
 end
 
-local function get_space_sharding_key(space_name)
-    if box.space._ddl_sharding_key == nil then
+local function get_metadata(space_name, metadata_name)
+    local metadata_space_name = string.format("_ddl_%s", metadata_name)
+
+    if box.space[metadata_space_name] == nil then
         return nil
     end
 
-    local record = box.space._ddl_sharding_key:get{space_name}
+    return box.space[metadata_space_name]:get{space_name}
+end
+
+local function get_sharding_func(space_name)
+    local record = get_metadata(space_name, "sharding_func")
+    if not record then
+        return nil
+    end
+
+    if record.sharding_func_body ~= nil then
+        return {body = record.sharding_func_body}
+    end
+
+    if record.sharding_func_name ~= nil then
+        return record.sharding_func_name
+    end
+
+    return nil
+end
+
+local function get_sharding_key(space_name)
+    local record = get_metadata(space_name, "sharding_key")
     return record and record.sharding_key
 end
 
@@ -70,7 +93,8 @@ local function get_space_schema(space_name)
     space_ddl.temporary = box_space.temporary
     space_ddl.engine = box_space.engine
     space_ddl.format = box_space:format()
-    space_ddl.sharding_key = get_space_sharding_key(space_name)
+    space_ddl.sharding_key = get_sharding_key(space_name)
+    space_ddl.sharding_func = get_sharding_func(space_name)
     for _, field in ipairs(space_ddl.format) do
         if field.is_nullable == nil then
             field.is_nullable = false
