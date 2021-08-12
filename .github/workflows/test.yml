@@ -9,9 +9,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runs-on: [ubuntu-20.04]
-        tarantool: ['1.10', '2.5', '2.6', '2.7', '2.8']
-    runs-on: ${{ matrix.runs-on }}
+        tarantool: ['1.10', '2.5', '2.6', '2.7']
+        coveralls: [false]
+        include:
+          - tarantool: '2.8'
+            coveralls: true
+    runs-on: [ubuntu-latest]
     steps:
       - uses: actions/checkout@master
       - uses: tarantool/setup-tarantool@v1
@@ -24,7 +27,7 @@ jobs:
         id: cache-rocks
         with:
           path: .rocks/
-          key: cache-rocks-${{ matrix.runs-on }}-05
+          key: cache-rocks-${{ matrix.runs-on }}-06
       -
         run: tarantoolctl rocks install luacheck
         if: steps.cache-rocks.outputs.cache-hit != 'true'
@@ -33,6 +36,9 @@ jobs:
         if: steps.cache-rocks.outputs.cache-hit != 'true'
       -
         run: tarantoolctl rocks install luacov
+        if: steps.cache-rocks.outputs.cache-hit != 'true'
+      -
+        run: tarantoolctl rocks install luacov-coveralls 0.2.3-1 --server http://luarocks.org
         if: steps.cache-rocks.outputs.cache-hit != 'true'
       - run: echo $PWD/.rocks/bin >> $GITHUB_PATH
 
@@ -44,12 +50,18 @@ jobs:
 
       - run: tarantoolctl rocks make
       - run: cmake -S . -B build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run luacheck
         run: make -C build luacheck
 
       - name: Run tests and code coverage analysis
         run: make -C build coverage
+
+      - name: Send code coverage to coveralls.io
+        run: make -C build coveralls
+        if: ${{ matrix.coveralls }}
 
       # Cleanup cached paths
       - run: tarantoolctl rocks remove cartridge

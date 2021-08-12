@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Added integration with service coveralls.io.
+
 ## [1.5.0] - 2021-08-09
 
 ### Added

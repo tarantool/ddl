@@ -1,6 +1,9 @@
 <a href="https://github.com/tarantool/ddl/actions?query=workflow%3ATest">
 <img src="https://github.com/tarantool/ddl/workflows/Test/badge.svg">
 </a>
+<a href='https://coveralls.io/github/tarantool/ddl?branch=master'>
+<img src='https://coveralls.io/repos/github/tarantool/ddl/badge.svg?branch=master' alt='Coverage Status' />
+</a>
 
 # DDL
 
