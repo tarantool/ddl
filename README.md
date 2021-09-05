@@ -84,6 +84,13 @@ bucket identifier (number)
 
     Return values: table with space's schemas (see "Schema example")
 
+### Get bucket id
+    `ddl.bucket_id(space_name, sharding_key)`
+    - Calculate bucket id for a specified space and sharding key.
+    Method uses sharding function specified in DDL schema.
+
+    Return values: bucket_id if no error, otherwise return `nil, err`
+
 ## Input data format
 
 ```lua

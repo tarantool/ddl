@@ -1,3 +1,6 @@
+local utils = require('ddl.utils')
+local ddl_check = require('ddl.check')
+
 local function _get_index_field_path(space, index_part)
     local space_field = space:format()[index_part.fieldno]
 
@@ -111,6 +114,56 @@ local function get_space_schema(space_name)
     return space_ddl
 end
 
+local function prepare_sharding_func_for_call(space_name, sharding_func_def)
+    if type(sharding_func_def) == 'string' then
+        local sharding_func = utils.get_G_function(sharding_func_def)
+        if sharding_func ~= nil and
+           ddl_check.internal.is_callable(sharding_func) == true then
+            return sharding_func
+        end
+    end
+
+    if type(sharding_func_def) == 'table' then
+        local sharding_func, err = loadstring('return ' .. sharding_func_def.body)
+        if sharding_func == nil then
+            return nil, string.format(
+                "Body is incorrect in sharding_func for space (%s): %s", space_name, err)
+        end
+        return sharding_func()
+    end
+
+    return nil, string.format(
+        "Wrong sharding function specified in DDL schema of space (%s)", space_name
+    )
+end
+
+local function bucket_id(space_name, sharding_key)
+    local sharding_func_def = get_sharding_func(space_name)
+    if sharding_func_def == nil then
+        return nil, string.format(
+            "No sharding function specified in DDL schema of space (%s)", space_name
+        )
+    end
+    local sharding_func, err =
+        prepare_sharding_func_for_call(space_name, sharding_func_def)
+    if err ~= nil then
+        return nil, err
+    end
+
+    local ok, id = pcall(sharding_func, sharding_key)
+    if not ok then
+        return nil, string.format(
+            "Failed to execute sharding function for space name (%s): %s",
+            space_name, id
+        )
+    end
+
+    return id
+end
+
 return {
     get_space_schema = get_space_schema,
+    internal = {
+        bucket_id = bucket_id,
+    }
 }

@@ -1030,5 +1030,8 @@ return {
     check_index_part = check_index_part,
     check_index_parts = check_index_parts,
     check_index = check_index,
-    check_field = check_field
+    check_field = check_field,
+    internal = {
+        is_callable = is_callable,
+    }
 }

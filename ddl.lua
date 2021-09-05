@@ -163,8 +163,29 @@ local function get_schema()
     }
 end
 
+local function bucket_id(space_name, sharding_key)
+    if type(space_name) ~= 'string' then
+        return nil, string.format(
+            "Invalid space name (string expected, got %s)", type(space_name)
+        )
+    end
+    if sharding_key == nil then
+        return nil, string.format(
+            "Sharding key specified for space (%s) is nil", space_name)
+    end
+
+    local bucket_id, err = ddl_get.internal.bucket_id(
+        space_name, sharding_key)
+    if err ~= nil then
+        return nil, err
+    end
+
+    return bucket_id
+end
+
 return {
     check_schema = check_schema,
     set_schema = set_schema,
     get_schema = get_schema,
+    bucket_id = bucket_id,
 }
