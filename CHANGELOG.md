@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Added integration with service coveralls.io.
 - Allow specifying `sharding_func` for space.
+- Add a method `bucket_id` that calculate bucket id using sharding function
+  specified in DDL schema.
 
 ## [1.5.0] - 2021-08-09
 
