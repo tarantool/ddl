@@ -32,4 +32,35 @@ function helpers.entrypoint(name)
     return path
 end
 
+helpers.sharding_func_body = [[
+function(shard_key)
+    local digest = require('digest')
+    if type(shard_key) ~= 'table' then
+        return digest.crc32(tostring(shard_key))
+    else
+        local crc32 = digest.crc32.new()
+        for _, v in ipairs(shard_key) do
+            crc32:update(tostring(v))
+        end
+        return crc32:result()
+    end
+end
+]]
+
+function helpers.sharding_func(shard_key_1, shard_key_2)
+    -- Sharding key is passed as a second argument when
+    -- sharding function is used as a metamethod __call for a table.
+    local shard_key = shard_key_2 or shard_key_1
+    local digest = require('digest')
+    if type(shard_key) ~= 'table' then
+        return digest.crc32(tostring(shard_key))
+    else
+        local crc32 = digest.crc32.new()
+        for _, v in ipairs(shard_key) do
+            crc32:update(tostring(v))
+        end
+        return crc32:result()
+    end
+end
+
 return helpers
