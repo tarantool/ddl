@@ -82,6 +82,8 @@ bucket identifier (number)
     `ddl.get_schema()`
     - Scan spaces and return the database schema.
 
+    Return values: table with space's schemas (see "Schema example")
+
 ## Input data format
 
 ```lua
