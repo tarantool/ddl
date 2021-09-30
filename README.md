@@ -36,8 +36,7 @@ in [documementation](https://www.tarantool.io/en/doc/latest/book/box/data_model/
 
     Return values: `true` if no error, otherwise return `nil, err`
 
-Additionally when a section `sharding_key` is not empty in YAML schema call of
-function `ddl.set_schema(schema)` creates a space `_ddl_sharding_key` with two
+Call of function `ddl.set_schema(schema)` creates a space `_ddl_sharding_key` with two
 fields: `space_name` with type `string` and `sharding_key` with type `array`.
 
 ### Check compatibility
