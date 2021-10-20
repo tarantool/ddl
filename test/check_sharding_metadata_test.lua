@@ -5,6 +5,8 @@ local db = require('test.db')
 local ddl = require('ddl')
 local ffi = require('ffi')
 
+local helper = require('test.helper')
+
 local g = t.group()
 local test_space = {
     engine = 'memtx',
@@ -109,7 +111,7 @@ function g.test_sharding_func_dot_notation()
 end
 
 function g.test_user_sharding_func_with_body()
-    g.space.sharding_func = {body = 'function(key) return <...> end'}
+    g.space.sharding_func = {body = helper.sharding_func_body}
 
     local res, err = ddl.check_schema(g.schema)
     t.assert_equals(err, nil)
@@ -153,7 +155,7 @@ function g.test_user_sharding_func_cdata_call()
     ]]
 
     local test_check_struct = ffi.metatype('test_check_struct_t', {
-        __call = function(_, key) return key end
+        __call = helper.sharding_func
     })
     rawset(_G, user_sharding_func_name, test_check_struct())
     g.space.sharding_func = user_sharding_func_name

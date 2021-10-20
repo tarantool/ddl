@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Allow specifying `sharding_func` for space.
 - Add a method `bucket_id` that calculate bucket id using sharding function
   specified in DDL schema.
+- Check correctness of sharding function before setting DDL schema. Sharding
+  function must accept any value and return a bucket id with type 'number'.
 
 ## [1.5.0] - 2021-08-09
 

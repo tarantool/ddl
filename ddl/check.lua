@@ -1,5 +1,6 @@
 local utils = require('ddl.utils')
 local db = require('ddl.db')
+local ddl_get = require('ddl.get')
 
 local function check_field(i, field, space)
     if type(field) ~= 'table' then
@@ -772,6 +773,23 @@ local function check_sharding_func(space)
                 space.name, type(space.sharding_func.body)
             )
         end
+
+        local sharding_key = utils.generate_sharding_key(space.format, space.sharding_key)
+        if sharding_key ~= nil then
+            local bucket_id, err = ddl_get.internal.bucket_id(
+                space.name, sharding_key, space.sharding_func)
+            if err ~= nil then
+                return nil, err
+            end
+            if type(bucket_id) ~= 'number' then
+                return nil, string.format(
+                    "spaces[%q].sharding_func: sharding function " ..
+                    "returns not a number (%s)",
+                    space.name, type(bucket_id)
+                )
+            end
+        end
+
     end
 
     return true

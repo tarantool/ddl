@@ -5,6 +5,8 @@ local db = require('test.db')
 local ddl = require('ddl')
 local ffi = require('ffi')
 
+local helper = require('test.helper')
+
 local g = t.group()
 local test_space = {
     engine = 'memtx',
@@ -74,7 +76,7 @@ g.before_each(function()
         table.deepcopy(bucket_id_idx)
     }
     g.space.sharding_key = {'unsigned_nonnull', 'integer_nonnull'}
-    g.space.sharding_func = {body = 'function(key) return <...> end'}
+    g.space.sharding_func = {body = helper.sharding_func_body}
     g.schema = {spaces = {
         space = g.space,
     }}

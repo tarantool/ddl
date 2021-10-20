@@ -23,3 +23,12 @@ function g.test_find_first_duplicate()
     t.assert_equals(ddl_utils.find_first_duplicate(objects, 'key'), 4)
     t.assert_not(ddl_utils.find_first_duplicate(objects, 'value'))
 end
+
+function g.test_generate_sharding_key_unsigned()
+    local space_format = {{
+        name = 'unsigned_nullable',
+        type = 'unsigned',
+    }}
+    local key = ddl_utils.generate_sharding_key(space_format, {'unsigned_nullable'})
+    t.assert_equals(key, {12345})
+end

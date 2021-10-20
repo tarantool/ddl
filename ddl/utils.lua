@@ -1,5 +1,8 @@
 local ffi = require('ffi')
 local bit = require('bit')
+local uuid = require('uuid')
+
+local db = require('ddl.db')
 
 -- copy from LuaJIT lj_char.c
 local lj_char_bits = {
@@ -187,6 +190,57 @@ local function is_callable(object)
     return false
 end
 
+local field_type_sample ={
+    any = 0,
+    array = {1, 2, 3, 4, 5},
+    boolean = true,
+    double = 1.2345,
+    integer = 12345,
+    map = {a = 5, b = 6},
+    number = tonumber64('18446744073709551615'),
+    scalar = 12345,
+    string = 'string',
+    unsigned = 12345,
+    uuid = uuid.new(),
+    --varbinary = , -- is it possible to create a varbinary sample?
+}
+if db.decimal_allowed() then
+    field_type_sample.decimal = require('decimal').new(1)
+end
+
+-- Build a map with field names as a keys and fieldno's
+-- as a values using space format as a source.
+local function get_format_field_map(space_format)
+    local field_map = {}
+    for _, field_param in ipairs(space_format) do
+        field_map[field_param.name] = field_param
+    end
+    return field_map
+end
+
+-- Generate sharding key sample using space format.
+-- Return a sharding key (array) or nil.
+local function generate_sharding_key(space_format, sharding_key_def)
+    if space_format == nil then
+        return nil
+    end
+    local space_format_field_map = get_format_field_map(space_format)
+    local sharding_key = {}
+    for _, field_name in ipairs(sharding_key_def) do
+        -- Do we need process is_nullable?
+        local field_param = space_format_field_map[field_name]
+        local field_type = field_param.type
+        local sample = field_type_sample[field_type]
+        if sample == nil then
+            -- Not enough samples to generate sharding key.
+            return nil
+        end
+        table.insert(sharding_key, sample)
+    end
+
+    return sharding_key
+end
+
 return {
     deepcmp = deepcmp,
     is_array = is_array,
@@ -196,4 +250,5 @@ return {
     lj_char_isident = lj_char_isident,
     lj_char_isdigit = lj_char_isdigit,
     LUA_KEYWORDS = LUA_KEYWORDS,
+    generate_sharding_key = generate_sharding_key,
 }

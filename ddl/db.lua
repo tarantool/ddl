@@ -14,6 +14,10 @@ local function check_version(expected_major, expected_minor)
     return true
 end
 
+local function decimal_allowed()
+    return check_version(2, 2)
+end
+
 local function json_path_allowed()
     return check_version(2, 1)
 end
@@ -64,6 +68,7 @@ local function call_dry_run(fun, ...)
 end
 
 return {
+    decimal_allowed = decimal_allowed,
     json_path_allowed = json_path_allowed,
     varbinary_allowed = varbinary_allowed,
     multikey_path_allowed = multikey_path_allowed,

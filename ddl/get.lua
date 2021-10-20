@@ -144,8 +144,8 @@ local function prepare_sharding_func_for_call(space_name, sharding_func_def)
     )
 end
 
-local function bucket_id(space_name, sharding_key)
-    local sharding_func_def = get_sharding_func(space_name)
+local function bucket_id(space_name, sharding_key, sharding_func_def)
+    local sharding_func_def = sharding_func_def or get_sharding_func(space_name)
     if sharding_func_def == nil then
         return nil, string.format(
             "No sharding function specified in DDL schema of space (%s)", space_name
