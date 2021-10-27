@@ -156,9 +156,41 @@ local function lj_char_isdigit(n)
     return bit.band(lj_char_bits[n + 2], LJ_CHAR_DIGIT) == LJ_CHAR_DIGIT
 end
 
+local function is_callable(object)
+    if type(object) == 'function' then
+        return true
+    end
+
+    -- all objects with type `cdata` are allowed
+    -- because there is no easy way to get
+    -- metatable.__call of object with type `cdata`
+    if type(object) == 'cdata' then
+        return true
+    end
+
+    local object_metatable = getmetatable(object)
+    if (type(object) == 'table' or type(object) == 'userdata') then
+        -- if metatable type is not `table` -> metatable is protected ->
+        -- cannot detect metamethod `__call` exists
+        if object_metatable and type(object_metatable) ~= 'table' then
+            return true
+        end
+
+        -- `__call` metamethod can be only the `function`
+        -- and cannot be a `table` | `userdata` | `cdata`
+        -- with `__call` methamethod on its own
+        if object_metatable and object_metatable.__call then
+            return type(object_metatable.__call) == 'function'
+        end
+    end
+
+    return false
+end
+
 return {
     deepcmp = deepcmp,
     is_array = is_array,
+    is_callable = is_callable,
     redundant_key = redundant_key,
     find_first_duplicate = find_first_duplicate,
     lj_char_isident = lj_char_isident,

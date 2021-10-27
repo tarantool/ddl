@@ -681,37 +681,6 @@ local function check_bucket_id_index(space)
     return true
 end
 
-local function is_callable(object)
-    if type(object) == 'function' then
-        return true
-    end
-
-    -- all objects with type `cdata` are allowed
-    -- because there is no easy way to get
-    -- metatable.__call of object with type `cdata`
-    if type(object) == 'cdata' then
-        return true
-    end
-
-    local object_metatable = getmetatable(object)
-    if (type(object) == 'table' or type(object) == 'userdata') then
-        -- if metatable type is not `table` -> metatable is protected ->
-        -- cannot detect metamethod `__call` exists
-        if object_metatable and type(object_metatable) ~= 'table' then
-            return true
-        end
-
-        -- `__call` metamethod can be only the `function`
-        -- and cannot be a `table` | `userdata` | `cdata`
-        -- with `__call` methamethod on its own
-        if object_metatable and object_metatable.__call then
-            return type(object_metatable.__call) == 'function'
-        end
-    end
-
-    return false
-end
-
 local function check_name_isident(name)
     if name == nil or name == '' then
         return false
@@ -760,7 +729,7 @@ local function check_sharding_func_name(sharding_func_name)
         return false
     end
 
-    return is_callable(sharding_func)
+    return utils.is_callable(sharding_func)
 end
 
 local function check_sharding_func(space)
@@ -1073,7 +1042,4 @@ return {
     check_index_parts = check_index_parts,
     check_index = check_index,
     check_field = check_field,
-    internal = {
-        is_callable = is_callable,
-    }
 }

@@ -1,4 +1,4 @@
-local ddl_check = require('ddl.check')
+local utils = require('ddl.utils')
 
 local function _get_index_field_path(space, index_part)
     local space_field = space:format()[index_part.fieldno]
@@ -122,7 +122,7 @@ local function prepare_sharding_func_for_call(space_name, sharding_func_def)
 
     local sharding_func = rawget(_G, sharding_func_def)
     if sharding_func ~= nil and
-       ddl_check.internal.is_callable(sharding_func) == true then
+       utils.is_callable(sharding_func) == true then
         return sharding_func
     end
 
