@@ -712,36 +712,6 @@ local function is_callable(object)
     return false
 end
 
-local function check_name_isident(name)
-    if name == nil or name == '' then
-        return false
-    end
-
-    -- sharding function name cannot
-    -- be equal to lua keyword
-    if utils.LUA_KEYWORDS[name] then
-        return false
-    end
-
-    -- sharding function name cannot
-    -- begin with a digit
-    local char_number = string.byte(name:sub(1,1))
-    if utils.lj_char_isdigit(char_number) then
-        return false
-    end
-
-    -- sharding func name must be sequence
-    -- of letters, digits, or underscore symbols
-    for i = 1, #name do
-        local char_number = string.byte(name:sub(i,i))
-        if not utils.lj_char_isident(char_number) then
-            return false
-        end
-    end
-
-    return true
-end
-
 local function check_sharding_func_name(sharding_func_name)
     -- split sharding func name in dot notation by dot
     -- foo.bar.baz -> chunks: foo bar baz
@@ -751,7 +721,7 @@ local function check_sharding_func_name(sharding_func_name)
     local sharding_func = _G
     -- check is the each chunk an identifier
     for _, chunk in pairs(chunks) do
-        if not check_name_isident(chunk) or sharding_func == nil then
+        if not utils.check_name_isident(chunk) or sharding_func == nil then
             return false
         end
         sharding_func = rawget(sharding_func, chunk)

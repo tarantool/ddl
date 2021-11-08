@@ -156,6 +156,36 @@ local function lj_char_isdigit(n)
     return bit.band(lj_char_bits[n + 2], LJ_CHAR_DIGIT) == LJ_CHAR_DIGIT
 end
 
+local function check_name_isident(name)
+    if name == nil or name == '' then
+        return false
+    end
+
+    -- sharding function name cannot
+    -- be equal to lua keyword
+    if LUA_KEYWORDS[name] then
+        return false
+    end
+
+    -- sharding function name cannot
+    -- begin with a digit
+    local char_number = string.byte(name:sub(1,1))
+    if lj_char_isdigit(char_number) then
+        return false
+    end
+
+    -- sharding func name must be sequence
+    -- of letters, digits, or underscore symbols
+    for i = 1, #name do
+        local char_number = string.byte(name:sub(i,i))
+        if not lj_char_isident(char_number) then
+            return false
+        end
+    end
+
+    return true
+end
+
 return {
     deepcmp = deepcmp,
     is_array = is_array,
@@ -164,4 +194,5 @@ return {
     lj_char_isident = lj_char_isident,
     lj_char_isdigit = lj_char_isdigit,
     LUA_KEYWORDS = LUA_KEYWORDS,
+    check_name_isident = check_name_isident,
 }
