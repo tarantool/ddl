@@ -300,9 +300,13 @@ function g.test_ddl_sharding_key_space()
 end
 
 function g.test_ddl_sharding_func_dot_notation()
+    local some_module = {
+        sharding_func = function(key) return key end
+    }
+    local user_sharding_func_name = 'some_module.sharding_func'
+    rawset(_G, 'some_module', some_module)
+
     local space_one = table.deepcopy(g.space)
-    local user_sharding_func_name = 'vshard.router.bucket_id_mpcrc32'
-    rawset(_G, user_sharding_func_name, function(key) return key end)
     space_one.sharding_func = user_sharding_func_name
 
     local schema = {

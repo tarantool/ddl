@@ -748,16 +748,13 @@ local function check_sharding_func_name(sharding_func_name)
     -- foo -> chunks: foo
     local chunks = string.split(sharding_func_name, '.')
 
+    local sharding_func = _G
     -- check is the each chunk an identifier
     for _, chunk in pairs(chunks) do
-        if not check_name_isident(chunk) then
+        if not check_name_isident(chunk) or sharding_func == nil then
             return false
         end
-    end
-
-    local sharding_func = rawget(_G, sharding_func_name)
-    if sharding_func == nil then
-        return false
+        sharding_func = rawget(sharding_func, chunk)
     end
 
     return is_callable(sharding_func)
