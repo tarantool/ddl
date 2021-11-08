@@ -713,21 +713,12 @@ local function is_callable(object)
 end
 
 local function check_sharding_func_name(sharding_func_name)
-    -- split sharding func name in dot notation by dot
-    -- foo.bar.baz -> chunks: foo bar baz
-    -- foo -> chunks: foo
-    local chunks = string.split(sharding_func_name, '.')
-
-    local sharding_func = _G
-    -- check is the each chunk an identifier
-    for _, chunk in pairs(chunks) do
-        if not utils.check_name_isident(chunk) or sharding_func == nil then
-            return false
-        end
-        sharding_func = rawget(sharding_func, chunk)
+    local sharding_func = utils.get_G_function(sharding_func_name)
+    if sharding_func ~= nil then
+        return is_callable(sharding_func)
     end
 
-    return is_callable(sharding_func)
+    return false
 end
 
 local function check_sharding_func(space)
