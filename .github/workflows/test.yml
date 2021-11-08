@@ -38,7 +38,7 @@ jobs:
         run: tarantoolctl rocks install luacov
         if: steps.cache-rocks.outputs.cache-hit != 'true'
       -
-        run: tarantoolctl rocks install luacov-coveralls 0.2.3-1 --server http://luarocks.org
+        run: tarantoolctl rocks install luacov-coveralls 0.2.3-1 --server=https://luarocks.org
         if: steps.cache-rocks.outputs.cache-hit != 'true'
       - run: echo $PWD/.rocks/bin >> $GITHUB_PATH
 
