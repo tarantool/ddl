@@ -186,6 +186,23 @@ local function check_name_isident(name)
     return true
 end
 
+-- split sharding func name in dot notation by dot
+-- foo.bar.baz -> chunks: foo bar baz
+-- foo -> chunks: foo
+local function get_G_function(func_name)
+    local chunks = string.split(func_name, '.')
+    local sharding_func = _G
+    -- check is the each chunk an identifier
+    for _, chunk in pairs(chunks) do
+        if not check_name_isident(chunk) or sharding_func == nil then
+            return nil
+        end
+        sharding_func = rawget(sharding_func, chunk)
+    end
+
+    return sharding_func
+end
+
 return {
     deepcmp = deepcmp,
     is_array = is_array,
@@ -194,5 +211,5 @@ return {
     lj_char_isident = lj_char_isident,
     lj_char_isdigit = lj_char_isdigit,
     LUA_KEYWORDS = LUA_KEYWORDS,
-    check_name_isident = check_name_isident,
+    get_G_function = get_G_function,
 }
