@@ -145,11 +145,11 @@ function g.test_user_sharding_func_cdata_call()
             int data;
         } test_check_struct_t;
     ]]
-
-    local test_check_struct = ffi.metatype('test_check_struct_t', {
+    ffi.metatype('test_check_struct_t', {
         __call = function(_, key) return key end
     })
-    rawset(_G, user_sharding_func_name, test_check_struct())
+    local test_check_struct = ffi.new('test_check_struct_t')
+    rawset(_G, user_sharding_func_name, test_check_struct)
     g.space.sharding_func = user_sharding_func_name
 
     local res, err = ddl.check_schema(g.schema)
