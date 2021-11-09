@@ -424,10 +424,11 @@ function g.test_ddl_user_sharding_func_cdata_call()
         } test_set_struct_t;
     ]]
 
-    local test_set_struct = ffi.metatype('test_set_struct_t', {
+    ffi.metatype('test_set_struct_t', {
         __call = function(_, key) return key end
     })
-    rawset(_G, user_sharding_func_name, test_set_struct())
+    local test_set_struct = ffi.new('test_set_struct_t')
+    rawset(_G, user_sharding_func_name, test_set_struct)
     space_one.sharding_func = user_sharding_func_name
 
     local schema = {
