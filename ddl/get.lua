@@ -1,4 +1,5 @@
 local utils = require('ddl.utils')
+local cache = require('ddl.cache')
 local ddl_check = require('ddl.check')
 
 local function _get_index_field_path(space, index_part)
@@ -66,10 +67,17 @@ local function get_metadata(space_name, metadata_name)
 end
 
 local function get_sharding_func(space_name)
-    local record = get_metadata(space_name, "sharding_func")
-    if not record then
+    return cache.internal.get(space_name)
+end
+
+local function get_sharding_func_raw(space_name)
+    local record = cache.internal.get(space_name)
+
+    if not record or not record.raw_tuple then
         return nil
     end
+
+    record = record.raw_tuple
 
     if record.sharding_func_body ~= nil then
         return {body = record.sharding_func_body}
@@ -97,7 +105,7 @@ local function get_space_schema(space_name)
     space_ddl.engine = box_space.engine
     space_ddl.format = box_space:format()
     space_ddl.sharding_key = get_sharding_key(space_name)
-    space_ddl.sharding_func = get_sharding_func(space_name)
+    space_ddl.sharding_func = get_sharding_func_raw(space_name)
     for _, field in ipairs(space_ddl.format) do
         if field.is_nullable == nil then
             field.is_nullable = false
@@ -115,21 +123,20 @@ local function get_space_schema(space_name)
 end
 
 local function prepare_sharding_func_for_call(space_name, sharding_func_def)
-    if type(sharding_func_def) == 'string' then
-        local sharding_func = utils.get_G_function(sharding_func_def)
+    if sharding_func_def.error ~= nil then
+        return nil, sharding_func_def.error
+    end
+
+    if sharding_func_def.parsed_func_name ~= nil then
+        local sharding_func = utils.get_G_function(sharding_func_def.parsed_func_name)
         if sharding_func ~= nil and
            ddl_check.internal.is_callable(sharding_func) == true then
             return sharding_func
         end
     end
 
-    if type(sharding_func_def) == 'table' then
-        local sharding_func, err = loadstring('return ' .. sharding_func_def.body)
-        if sharding_func == nil then
-            return nil, string.format(
-                "Body is incorrect in sharding_func for space (%s): %s", space_name, err)
-        end
-        return sharding_func()
+    if sharding_func_def.callable ~= nil then
+        return sharding_func_def.callable
     end
 
     return nil, string.format(
