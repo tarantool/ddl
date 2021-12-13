@@ -89,6 +89,11 @@ bucket identifier (number)
     - Calculate bucket id for a specified space and sharding key.
     Method uses sharding function specified in DDL schema.
 
+    Method is not transactional in the sense that it catches up
+    `_ddl_sharding_func` changes immediatelly: it may see changes that're
+    not committed yet and may see a state from another transaction,
+    which should not be visible in the current transaction.
+
     Return values: bucket_id if no error, otherwise return `nil, err`
 
 ## Input data format

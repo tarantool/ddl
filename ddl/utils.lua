@@ -189,9 +189,19 @@ end
 -- split sharding func name in dot notation by dot
 -- foo.bar.baz -> chunks: foo bar baz
 -- foo -> chunks: foo
+--
+-- func_name parameter may be a string in dot notation or table
+-- if func_name type is of type table it is assumed that it is already split
 local function get_G_function(func_name)
-    local chunks = string.split(func_name, '.')
     local sharding_func = _G
+    local chunks
+
+    if type(func_name) == 'string' then
+        chunks = string.split(func_name, '.')
+    else
+        chunks = func_name
+    end
+
     -- check is the each chunk an identifier
     for _, chunk in pairs(chunks) do
         if not check_name_isident(chunk) or sharding_func == nil then
