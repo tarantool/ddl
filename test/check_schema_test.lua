@@ -5,45 +5,27 @@ local db = require('test.db')
 local ddl_check = require('ddl.check')
 local ddl = require('ddl')
 
+local helper = require('test.helper')
+
 local g = t.group()
 g.before_all(db.init)
 g.before_each(db.drop_all)
+
+local space_format = helper.test_space_format()
+table.insert(space_format, {name = 'decimal_nonnull', type = 'decimal', is_nullable = false})
+table.insert(space_format, {name = 'decimal_null', type = 'decimal', is_nullable = true})
+table.insert(space_format, {name = 'double_nonnull', type = 'double', is_nullable = false})
+table.insert(space_format, {name = 'double_null', type = 'double', is_nullable = true})
+table.insert(space_format, {name = 'uuid_nonnull', type = 'uuid', is_nullable = false})
+table.insert(space_format, {name = 'uuid_null', type = 'uuid', is_nullable = true})
+table.insert(space_format, {name = 'annotated', type = 'any', is_nullable = true, comment = 'x'})
 
 local test_space = {
     engine = 'memtx',
     is_local = true,
     temporary = false,
-    format = {
-        {name = 'unsigned_nonnull', type = 'unsigned', is_nullable = false},
-        {name = 'unsigned_nullable', type = 'unsigned', is_nullable = true},
-        {name = 'integer_nonnull', type = 'integer', is_nullable = false},
-        {name = 'integer_nullable', type = 'integer', is_nullable = true},
-        {name = 'number_nonnull', type = 'number', is_nullable = false},
-        {name = 'number_nullable', type = 'number', is_nullable = true},
-        {name = 'boolean_nonnull', type = 'boolean', is_nullable = false},
-        {name = 'boolean_nullable', type = 'boolean', is_nullable = true},
-        {name = 'string_nonnull', type = 'string', is_nullable = false},
-        {name = 'string_nullable', type = 'string', is_nullable = true},
-        {name = 'scalar_nonnull', type = 'scalar', is_nullable = false},
-        {name = 'scalar_nullable', type = 'scalar', is_nullable = true},
-        {name = 'array_nonnull', type = 'array', is_nullable = false},
-        {name = 'array_nullable', type = 'array', is_nullable = true},
-        {name = 'map_nonnull', type = 'map', is_nullable = false},
-        {name = 'map_nullable', type = 'map', is_nullable = true},
-        {name = 'any_nonnull', type = 'any', is_nullable = false},
-        {name = 'any_nullable', type = 'any', is_nullable = true},
-        ---------------------------------------------------------
-        {name = 'decimal_nonnull', type = 'decimal', is_nullable = false},
-        {name = 'decimal_null', type = 'decimal', is_nullable = true},
-        {name = 'double_nonnull', type = 'double', is_nullable = false},
-        {name = 'double_null', type = 'double', is_nullable = true},
-        {name = 'uuid_nonnull', type = 'uuid', is_nullable = false},
-        {name = 'uuid_null', type = 'uuid', is_nullable = true},
-
-        {name = 'annotated', type = 'any', is_nullable = true, comment = 'x'},
-    },
+    format = space_format
 }
-
 
 local test_indexes = {{
         type = 'HASH',
