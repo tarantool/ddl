@@ -1,5 +1,7 @@
 require('strict').on()
 
+local db = require('test.db')
+
 local fio = require('fio')
 local digest = require('digest')
 local helpers = table.copy(require('luatest').helpers)
@@ -18,6 +20,36 @@ fio.tempdir = function(base)
         fio.mktree(path)
         return path
     end
+end
+
+function helpers.test_space_format()
+    local space_format = {
+        {name = 'unsigned_nonnull', type = 'unsigned', is_nullable = false},
+        {name = 'unsigned_nullable', type = 'unsigned', is_nullable = true},
+        {name = 'integer_nonnull', type = 'integer', is_nullable = false},
+        {name = 'integer_nullable', type = 'integer', is_nullable = true},
+        {name = 'number_nonnull', type = 'number', is_nullable = false},
+        {name = 'number_nullable', type = 'number', is_nullable = true},
+        {name = 'boolean_nonnull', type = 'boolean', is_nullable = false},
+        {name = 'boolean_nullable', type = 'boolean', is_nullable = true},
+        {name = 'string_nonnull', type = 'string', is_nullable = false},
+        {name = 'string_nullable', type = 'string', is_nullable = true},
+        {name = 'scalar_nonnull', type = 'scalar', is_nullable = false},
+        {name = 'scalar_nullable', type = 'scalar', is_nullable = true},
+        {name = 'array_nonnull', type = 'array', is_nullable = false},
+        {name = 'array_nullable', type = 'array', is_nullable = true},
+        {name = 'map_nonnull', type = 'map', is_nullable = false},
+        {name = 'map_nullable', type = 'map', is_nullable = true},
+        {name = 'any_nonnull', type = 'any', is_nullable = false},
+        {name = 'any_nullable', type = 'any', is_nullable = true},
+    }
+
+    if db.v(2, 2) then
+        table.insert(space_format, {name = 'varbinary_nonnull', type = 'varbinary', is_nullable = false})
+        table.insert(space_format, {name = 'varbinary_nullable', type = 'varbinary', is_nullable = true})
+    end
+
+    return table.deepcopy(space_format)
 end
 
 function helpers.entrypoint(name)

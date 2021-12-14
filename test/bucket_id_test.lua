@@ -9,32 +9,6 @@ local helper = require('test.helper')
 local REFERENCE_KEY = {1, 2, 3}
 local REFERENCE_BUCKET_ID = 4018458701
 
-local test_space = {
-    engine = 'memtx',
-    is_local = true,
-    temporary = false,
-    format = {
-        {name = 'unsigned_nonnull', type = 'unsigned', is_nullable = false},
-        {name = 'unsigned_nullable', type = 'unsigned', is_nullable = true},
-        {name = 'integer_nonnull', type = 'integer', is_nullable = false},
-        {name = 'integer_nullable', type = 'integer', is_nullable = true},
-        {name = 'number_nonnull', type = 'number', is_nullable = false},
-        {name = 'number_nullable', type = 'number', is_nullable = true},
-        {name = 'boolean_nonnull', type = 'boolean', is_nullable = false},
-        {name = 'boolean_nullable', type = 'boolean', is_nullable = true},
-        {name = 'string_nonnull', type = 'string', is_nullable = false},
-        {name = 'string_nullable', type = 'string', is_nullable = true},
-        {name = 'scalar_nonnull', type = 'scalar', is_nullable = false},
-        {name = 'scalar_nullable', type = 'scalar', is_nullable = true},
-        {name = 'array_nonnull', type = 'array', is_nullable = false},
-        {name = 'array_nullable', type = 'array', is_nullable = true},
-        {name = 'map_nonnull', type = 'map', is_nullable = false},
-        {name = 'map_nullable', type = 'map', is_nullable = true},
-        {name = 'any_nonnull', type = 'any', is_nullable = false},
-        {name = 'any_nullable', type = 'any', is_nullable = true},
-    },
-}
-
 local primary_index = {
     type = 'HASH',
     unique = true,
@@ -57,7 +31,13 @@ g.before_all(db.init)
 g.before_each(function()
     db.drop_all()
 
-    g.space = table.deepcopy(test_space)
+    g.space = {
+        engine = 'memtx',
+        is_local = true,
+        temporary = false,
+        format = table.deepcopy(helper.test_space_format())
+    }
+
     table.insert(g.space.format, 1, {
         name = 'bucket_id', type = 'unsigned', is_nullable = false
     })
