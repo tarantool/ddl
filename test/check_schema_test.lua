@@ -183,6 +183,21 @@ function g.test_varbinaty_index_part_type()
     end
 end
 
+function g.test_datetime_index_part_type()
+    if db.v(2, 10) then
+        local ok, err = ddl_check.check_index_part_type('datetime', 'TREE')
+        t.assert(ok)
+        t.assert_not(err)
+    else
+        local ok, err = ddl_check.check_index_part_type('datetime', 'TREE')
+        t.assert_not(ok)
+        t.assert_equals(err, string.format(
+            "datetime type isn't allowed in your Tarantool version (%s)",
+            _TARANTOOL
+        ))
+    end
+end
+
 function g.test_index_part_path()
     local index_info = {type = 'HASH'}
 
@@ -1125,6 +1140,21 @@ function g.test_field()
         t.assert_not(ok)
         t.assert_equals(err, string.format(
             [[spaces["space"].format["x"].type: varbinary type ]] ..
+            [[isn't allowed in your Tarantool version (%s)]],
+            _TARANTOOL
+        ))
+    end
+
+    local ok, err = ddl_check.check_field(
+        1, {name = 'x', type = 'datetime', is_nullable = false}, space_info
+    )
+    if db.v(2, 10) then
+        t.assert(ok)
+        t.assert_not(err)
+    else
+        t.assert_not(ok)
+        t.assert_equals(err, string.format(
+            [[spaces["space"].format["x"].type: datetime type ]] ..
             [[isn't allowed in your Tarantool version (%s)]],
             _TARANTOOL
         ))

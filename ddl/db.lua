@@ -26,6 +26,11 @@ local function varbinary_allowed()
     return check_version(2, 2)
 end
 
+local function datetime_allowed()
+    return check_version(2, 10)
+end
+
+
 -- https://github.com/tarantool/tarantool/issues/4083
 local function transactional_ddl_allowed()
     return check_version(2, 2)
@@ -68,6 +73,7 @@ return {
     varbinary_allowed = varbinary_allowed,
     multikey_path_allowed = multikey_path_allowed,
     transactional_ddl_allowed = transactional_ddl_allowed,
+    datetime_allowed = datetime_allowed,
 
     call_atomic = call_atomic,
     call_dry_run = call_dry_run,

@@ -6,3 +6,12 @@
 .idea
 luacov.report.out
 luacov.stats.out
+.history
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+/Testing
+*.all.rock
+*.src.rock
