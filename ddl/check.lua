@@ -53,6 +53,7 @@ local function check_field(i, field, space)
             decimal   = true,
             double    = true,
             uuid      = true,
+            datetime  = true,
         }
 
         if known_field_types[field.type] == nil then
@@ -65,6 +66,13 @@ local function check_field(i, field, space)
         if not db.varbinary_allowed() and field.type == 'varbinary' then
             return nil, string.format(
                 "spaces[%q].format[%q].type: varbinary type isn't allowed in your Tarantool version (%s)",
+                space.name, field.name, _TARANTOOL
+            )
+        end
+
+        if not db.datetime_allowed() and field.type == 'datetime' then
+            return nil, string.format(
+                "spaces[%q].format[%q].type: datetime type isn't allowed in your Tarantool version (%s)",
                 space.name, field.name, _TARANTOOL
             )
         end
@@ -192,6 +200,7 @@ local function check_index_part_type(part_type, index_type)
         decimal = true,
         double = true,
         uuid = true,
+        datetime = true,
     }
 
     if not known_part_types[part_type] then
@@ -206,6 +215,13 @@ local function check_index_part_type(part_type, index_type)
             "varbinary type isn't allowed in your Tarantool version (%s)",
            _TARANTOOL
         )
+    end
+
+    if not db.datetime_allowed() and part_type == 'datetime' then
+        return nil, string.format(
+             "datetime type isn't allowed in your Tarantool version (%s)",
+            _TARANTOOL
+         )
     end
 
     local err_template = "%s field type is unsupported in %s index type"
@@ -287,6 +303,7 @@ local function check_index_part(i, index, space)
         varbinary = true,
         double = true,
         decimal = true,
+        datetime = true,
     }
 
     do -- check index.part.type equals format.field.type
