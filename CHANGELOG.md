@@ -6,7 +6,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-- Added support of `datetime` type for Tarantool 2.10+
+### Added
+
+### Changed
+
+### Fixed
+
+## [1.6.1] - 2022-06-21
+
+### Added
+
+- Added support of `datetime` type for Tarantool 2.10+ (#92).
 
 ## [1.6.0] - 2022-02-01
 
