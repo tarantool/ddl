@@ -27,9 +27,10 @@ find_package(LuaCovCoveralls)
 
 set(CODE_COVERAGE_REPORT "${PROJECT_SOURCE_DIR}/luacov.report.out")
 set(CODE_COVERAGE_STATS "${PROJECT_SOURCE_DIR}/luacov.stats.out")
+string(RANDOM ALPHABET 0123456789 seed)
 
 add_custom_target(luatest
-  COMMAND ${LUATEST} -v --coverage
+  COMMAND ${LUATEST} -v --coverage --shuffle all:${seed}
   BYPRODUCTS ${CODE_COVERAGE_STATS}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   COMMENT "Run regression tests"

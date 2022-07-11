@@ -154,8 +154,12 @@ function g.test_two_sharding_spaces()
     space_two.sharding_key = {
         'unsigned_nonnull', 'integer_nonnull', 'string_nonnull'
     }
-    local sharding_func_name = 'some_module.sharding_func'
-    rawset(_G, sharding_func_name, function(key) return key end)
+    local some_module = {
+        sharding_func = function(key) return key end
+    }
+    local sharding_func_module = 'some_module'
+    local sharding_func_name = sharding_func_module .. '.sharding_func'
+    rawset(_G, sharding_func_module, some_module)
     space_two.sharding_func = sharding_func_name
 
     local schema = {
@@ -195,7 +199,7 @@ function g.test_two_sharding_spaces()
     local ddl_schema = ddl.get_schema()
     t.assert_equals(ddl_schema, schema)
     -- remove test data
-    rawset(_G, sharding_func_name, nil)
+    rawset(_G, sharding_func_module, nil)
 end
 
 function g.test_apply_sequently()
@@ -286,8 +290,9 @@ function g.test_ddl_sharding_func_dot_notation()
     local some_module = {
         sharding_func = function(key) return key end
     }
-    local user_sharding_func_name = 'some_module.sharding_func'
-    rawset(_G, 'some_module', some_module)
+    local sharding_func_module = 'some_module'
+    local user_sharding_func_name = sharding_func_module .. '.sharding_func'
+    rawset(_G, sharding_func_module, some_module)
 
     local space_one = table.deepcopy(g.space)
     space_one.sharding_func = user_sharding_func_name
@@ -319,7 +324,7 @@ function g.test_ddl_sharding_func_dot_notation()
     local ddl_schema = ddl.get_schema()
     t.assert_equals(ddl_schema, schema)
     -- remove test data
-    rawset(_G, user_sharding_func_name, nil)
+    rawset(_G, sharding_func_module, nil)
 end
 
 function g.test_ddl_user_sharding_function_call()
