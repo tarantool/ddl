@@ -8,6 +8,12 @@ local ffi = require('ffi')
 local helper = require('test.helper')
 
 local g = t.group()
+
+local vshard_group = t.group('set_vshard_sharding_func', {
+    {sharding_func_name = 'vshard.router.bucket_id_mpcrc32'},
+    {sharding_func_name = 'vshard.router.bucket_id_strcrc32'},
+})
+
 local test_space = {
     engine = 'memtx',
     is_local = true,
@@ -43,24 +49,23 @@ local sharding_func_format = {
     {name = 'sharding_func_body', type = 'string', is_nullable = true},
 }
 
+local sharding_key = {'unsigned_nonnull', 'integer_nonnull'}
+local sharding_func = {body = 'function(key) return <...> end'}
+
 g.before_all(db.init)
 g.before_each(function()
-    db.drop_all()
-
-    g.space = table.deepcopy(test_space)
-    table.insert(g.space.format, 1, {
-        name = 'bucket_id', type = 'unsigned', is_nullable = false
+    helper.prepare_schema(g, test_space, primary_index, bucket_id_idx,{
+        sharding_key = sharding_key,
+        sharding_func = sharding_func,
     })
+end)
 
-    g.space.indexes = {
-        table.deepcopy(primary_index),
-        table.deepcopy(bucket_id_idx)
-    }
-    g.space.sharding_key = {'unsigned_nonnull', 'integer_nonnull'}
-    g.space.sharding_func = {body = 'function(key) return <...> end'}
-    g.schema = {spaces = {
-        space = g.space,
-    }}
+vshard_group.before_all(db.init)
+vshard_group.before_each(function(pgroup)
+    helper.prepare_schema(pgroup, test_space, primary_index, bucket_id_idx,{
+        sharding_key = sharding_key,
+        sharding_func = sharding_func,
+    })
 end)
 
 local function normalize_rows(rows)
@@ -514,6 +519,40 @@ function g.test_ddl_user_sharding_func_with_body()
         {
             {'space_one', box.NULL, space_one.sharding_func.body}
         }
+    )
+
+    local ddl_schema = ddl.get_schema()
+    t.assert_equals(ddl_schema, schema)
+end
+
+function vshard_group.test_sharding_func(pgroup)
+    local space_one = table.deepcopy(pgroup.space)
+    local sharding_func_name = pgroup.params.sharding_func_name
+
+    space_one.sharding_func = sharding_func_name
+
+    local schema = {
+        spaces = {
+            space_one = space_one
+        }
+    }
+
+    local ok, err = ddl.set_schema(schema)
+    t.assert_equals(err, nil)
+    t.assert_equals(ok, true)
+
+    local _ddl_sharding_func = box.space['_ddl_sharding_func']
+    t.assert_not_equals(_ddl_sharding_func, nil)
+
+    local format = _ddl_sharding_func:format()
+    t.assert_equals(#format, 3)
+    t.assert_equals(format, sharding_func_format)
+
+    t.assert_items_equals(
+            normalize_rows(_ddl_sharding_func:select()),
+            {
+                {'space_one', sharding_func_name}
+            }
     )
 
     local ddl_schema = ddl.get_schema()

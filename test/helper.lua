@@ -100,4 +100,26 @@ function helpers.sharding_func(shard_key_1, shard_key_2)
     end
 end
 
+function helpers.prepare_schema(g, test_space, primary_index, bucket_id_idx, test_opts)
+    db.drop_all()
+
+    local opts = test_opts or {}
+    opts = table.deepcopy(opts)
+
+    g.space = table.deepcopy(test_space)
+    table.insert(g.space.format, 1, {
+        name = 'bucket_id', type = 'unsigned', is_nullable = false
+    })
+
+    g.space.indexes = {
+        table.deepcopy(primary_index),
+        table.deepcopy(bucket_id_idx)
+    }
+    g.space.sharding_key = opts.sharding_key
+    g.space.sharding_func = opts.sharding_func
+    g.schema = {spaces = {
+        space = g.space,
+    }}
+end
+
 return helpers
