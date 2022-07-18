@@ -1,6 +1,11 @@
 local utils = require('ddl.utils')
 local db = require('ddl.db')
 
+local vshard_func_support = {
+    ['vshard.router.bucket_id_mpcrc32'] = true,
+    ['vshard.router.bucket_id_strcrc32'] = true
+}
+
 local function check_field(i, field, space)
     if type(field) ~= 'table' then
         return nil, string.format(
@@ -735,7 +740,7 @@ local function check_sharding_func_name(sharding_func_name)
         return is_callable(sharding_func)
     end
 
-    return false
+    return vshard_func_support[sharding_func_name]
 end
 
 local function check_sharding_func(space)

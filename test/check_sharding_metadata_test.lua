@@ -8,6 +8,12 @@ local ffi = require('ffi')
 local helper = require('test.helper')
 
 local g = t.group()
+
+local vshard_group = t.group('check_vshard_sharding_func', {
+    {sharding_func_name = 'vshard.router.bucket_id_mpcrc32'},
+    {sharding_func_name = 'vshard.router.bucket_id_strcrc32'},
+})
+
 local test_space = {
     engine = 'memtx',
     is_local = true,
@@ -32,23 +38,20 @@ local bucket_id_idx = {
     name = 'bucket_id'
 }
 
+local sharding_key = {'unsigned_nonnull', 'integer_nonnull'}
+
 g.before_all(db.init)
 g.before_each(function()
-    db.drop_all()
-
-    g.space = table.deepcopy(test_space)
-    table.insert(g.space.format, 1, {
-        name = 'bucket_id', type = 'unsigned', is_nullable = false
+    helper.prepare_schema(g, test_space, primary_index, bucket_id_idx,{
+        sharding_key = sharding_key,
     })
+end)
 
-    g.space.indexes = {
-        table.deepcopy(primary_index),
-        table.deepcopy(bucket_id_idx)
-    }
-    g.space.sharding_key = {'unsigned_nonnull', 'integer_nonnull'}
-    g.schema = {spaces = {
-        space = g.space,
-    }}
+vshard_group.before_all(db.init)
+vshard_group.before_each(function(pgroup)
+    helper.prepare_schema(pgroup, test_space, primary_index, bucket_id_idx, {
+        sharding_key = sharding_key,
+    })
 end)
 
 
@@ -526,4 +529,12 @@ function g.test_sharding_func_invalid_name_component()
     t.assert_equals(ok, nil)
     -- remove test data
     rawset(_G, user_sharding_func_name, nil)
+end
+
+function vshard_group.test_sharding_func(pgroup)
+    pgroup.space.sharding_func = pgroup.params.sharding_func_name
+
+    local res, err = ddl.check_schema(pgroup.schema)
+    t.assert_equals(err, nil)
+    t.assert_equals(res, true)
 end
