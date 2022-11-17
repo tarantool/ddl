@@ -65,7 +65,8 @@ local function cache_build()
         end
     end
 
-    cache.schema_version = box.internal.schema_version()
+    -- If Tarantool public API for schema version is not available, fallback to unreliable internal API.
+    cache.schema_version = box.info.schema_version or box.internal.schema_version()
 
 end
 
@@ -96,11 +97,8 @@ local function cache_get(space_name)
         return nil
     end
 
-    -- using tarantool internal API.
-    -- this is not reliable, but it is the only way to track
-    -- schema_version changes. Fix it if a public method appears:
-    -- https://github.com/tarantool/tarantool/issues/6544
-    local schema_version = box.internal.schema_version()
+    -- If Tarantool public API for schema version is not available, fallback to unreliable internal API.
+    local schema_version = box.info.schema_version or box.internal.schema_version()
 
     if not cache then
         cache = {}
