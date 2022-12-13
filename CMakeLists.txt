@@ -36,6 +36,12 @@ add_custom_target(luatest
   COMMENT "Run regression tests"
 )
 
+add_custom_target(luatest-no-coverage
+  COMMAND ${LUATEST} -v --shuffle all:${seed}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMENT "Run regression tests without coverage"
+)
+
 add_custom_target(coverage
   COMMAND ${LUACOV} ${PROJECT_SOURCE_DIR} && grep -A999 '^Summary' ${CODE_COVERAGE_REPORT}
   DEPENDS ${CODE_COVERAGE_STATS}
