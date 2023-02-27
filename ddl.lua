@@ -188,4 +188,5 @@ return {
     set_schema = set_schema,
     get_schema = get_schema,
     bucket_id = bucket_id,
+    _VERSION = require('ddl.version'),
 }
