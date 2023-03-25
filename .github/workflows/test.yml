@@ -14,7 +14,13 @@ jobs:
         include:
           - tarantool: '2.8'
             coveralls: true
-    runs-on: [ubuntu-latest]
+    # There are problems with current version of the
+    # setup-tarantool action on Ubuntu Jammy (ubuntu-latest or
+    # ubuntu-22.04). Use Ubuntu Focal (ubuntu-20.04) until they
+    # will be resolved. See [1] for details.
+    #
+    # [1]: https://github.com/tarantool/setup-tarantool/issues/36
+    runs-on: [ubuntu-20.04]
     steps:
       - uses: actions/checkout@v2
       - uses: tarantool/setup-tarantool@v1
@@ -71,7 +77,13 @@ jobs:
       fail-fast: false
       matrix:
         tarantool: ['1.10', '2.5', '2.6', '2.7']
-    runs-on: [ubuntu-latest]
+    # There are problems with current version of the
+    # setup-tarantool action on Ubuntu Jammy (ubuntu-latest or
+    # ubuntu-22.04). Use Ubuntu Focal (ubuntu-20.04) until they
+    # will be resolved. See [1] for details.
+    #
+    # [1]: https://github.com/tarantool/setup-tarantool/issues/36
+    runs-on: [ubuntu-20.04]
     steps:
       - uses: actions/checkout@v2
       - uses: tarantool/setup-tarantool@v1
