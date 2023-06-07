@@ -137,11 +137,6 @@ local function _set_schema(schema)
 end
 
 local function set_schema(schema)
-    local ok, err = check_schema_format(schema)
-    if not ok then
-        return nil, err
-    end
-
     local ok, err = check_schema(schema)
     if not ok then
         return nil, err
