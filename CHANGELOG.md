@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- Add basic fieldno path support for indexes (#108).
+  It is the compatibility layer for Tarantool spaces created not through ddl:
+  users are not encouraged to create fieldno path indexes in schema,
+  since we do not support them as sharding keys.
+
 ## [1.6.2] - 2022-08-22
 
 ### Fixed

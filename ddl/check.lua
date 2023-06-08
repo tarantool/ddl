@@ -99,10 +99,14 @@ local function check_field(i, field, space)
 end
 
 local function is_path_multikey(path)
-    return string.find(path, '[*]', 1, true) ~= nil
+    return (type(path) == 'string') and (string.find(path, '[*]', 1, true) ~= nil)
 end
 
 local function get_path_info(path)
+    if type(path) == 'number' then
+        return {field_name = path, type = 'regular'}
+    end
+
     local multikey_start, _ = string.find(path, '[*]', 1, true)
     local json_start, _ = string.find(path, '.', 1, true)
 
@@ -130,16 +134,19 @@ end
 
 
 local function check_index_part_path(path, index, space)
-    if type(path) ~= 'string' then
+    if (type(path) ~= 'string') and (type(path) ~= 'number') then
         return nil, string.format(
-            "bad value (string expected, got %s)",
+            "bad value (string|number expected, got %s)",
             type(path)
         )
     end
 
     local path_info = get_path_info(path)
-    do -- check index.part.path references to existing field
-        if not space.fields[path_info.field_name] then
+    do
+        -- Check index.part.path references to existing field.
+        -- If index path is a fieldno, core Tarantool space rules
+        -- allows it to be outside the format.
+        if type(path_info.field_name) == 'string' and not space.fields[path_info.field_name] then
             return nil, string.format(
                 "path (%s) referencing to unknown field",
                 path
@@ -286,6 +293,8 @@ local function check_index_part(i, index, space)
     end
 
     local path_info = get_path_info(part.path)
+    -- If field_name is fieldno, it is allowed to be outside of format.
+    -- space_format_field will be nil in this case.
     local space_format_field = space.fields[path_info.field_name]
     do -- check part.type is valid and it is valid for index type
         local ok, err = check_index_part_type(part.type, index.type)
@@ -312,7 +321,12 @@ local function check_index_part(i, index, space)
     }
 
     do -- check index.part.type equals format.field.type
-        if path_info.type == 'regular' and space_format_field.type ~= 'any' then
+        if (
+            path_info.type == 'regular' and
+            space_format_field ~= nil and
+            space_format_field.type ~= 'any'
+        )
+        then
             if not (
                 (part.type == 'scalar' and scalar_types[space_format_field.type]) or
                 (space_format_field.type == 'scalar' and scalar_types[part.type])
@@ -358,7 +372,11 @@ local function check_index_part(i, index, space)
     end
 
     do -- check the same nullability
-        if space_format_field.is_nullable ~= part.is_nullable then
+        if (
+            space_format_field ~= nil and
+            space_format_field.is_nullable ~= part.is_nullable
+        )
+        then
             return nil, string.format(
                 "spaces[%q].indexes[%q].parts[%d].is_nullable: has different nullability with " ..
                 "spaces[%q].format[%q].is_nullable (%s expected, got %s)",

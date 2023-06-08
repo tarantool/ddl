@@ -1307,3 +1307,83 @@ function g.test_transactional_ddl()
 
     box.space._index:on_replace(nil, actual_failure)
 end
+
+g.test_gh_108_fieldno_index_no_space_format = function()
+    local _, err = ddl.set_schema({spaces = {weird_space = {
+        engine = 'memtx',
+        is_local = false,
+        temporary = false,
+        format = {},
+        indexes = {{
+            name = 'pk',
+            type = 'TREE',
+            parts = {
+                {path = 1, type = 'unsigned', is_nullable = false},
+            },
+            unique = true,
+        }},
+    }}})
+    t.assert_equals(err, nil)
+
+    t.assert_equals(box.space['weird_space']:format(), {})
+    t.assert_equals(
+        box.space['weird_space'].index['pk'].parts,
+        {{fieldno = 1, type = 'unsigned', is_nullable = false}})
+
+    t.assert_equals(box.space['weird_space']:insert{1}, {1})
+    t.assert_equals(box.space['weird_space']:insert{2, 'val'}, {2, 'val'})
+end
+
+g.test_gh_108_fieldno_index_in_space_format = function()
+    local _, err = ddl.set_schema({spaces = {weird_space = {
+        engine = 'memtx',
+        is_local = false,
+        temporary = false,
+        format = {{name = 'id', type = 'unsigned', is_nullable = false}},
+        indexes = {{
+            name = 'pk',
+            type = 'TREE',
+            parts = {
+                {path = 1, type = 'unsigned', is_nullable = false},
+            },
+            unique = true,
+        }},
+    }}})
+    t.assert_equals(err, nil)
+
+    t.assert_equals(box.space['weird_space']:format(),
+        {{is_nullable = false, name = "id", type = "unsigned"}})
+    t.assert_equals(
+        box.space['weird_space'].index['pk'].parts,
+        {{fieldno = 1, type = 'unsigned', is_nullable = false}})
+
+    t.assert_equals(box.space['weird_space']:insert{1}, {1})
+    t.assert_equals(box.space['weird_space']:insert{2, 'val'}, {2, 'val'})
+end
+
+g.test_gh_108_fieldno_index_outside_space_format = function()
+    local _, err = ddl.set_schema({spaces = {weird_space = {
+        engine = 'memtx',
+        is_local = false,
+        temporary = false,
+        format = {{name = 'id', type = 'unsigned', is_nullable = false}},
+        indexes = {{
+            name = 'pk',
+            type = 'TREE',
+            parts = {
+                {path = 2, type = 'string', is_nullable = false},
+            },
+            unique = true,
+        }},
+    }}})
+    t.assert_equals(err, nil)
+
+    t.assert_equals(box.space['weird_space']:format(),
+        {{is_nullable = false, name = "id", type = "unsigned"}})
+    t.assert_equals(
+        box.space['weird_space'].index['pk'].parts,
+        {{fieldno = 2, type = 'string', is_nullable = false}})
+
+    t.assert_equals(box.space['weird_space']:insert{1, 'val'}, {1, 'val'})
+    t.assert_equals(box.space['weird_space']:insert{2, 'val2', 3}, {2, 'val2', 3})
+end
