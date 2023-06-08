@@ -803,3 +803,88 @@ function g.test_get_schema_with_default_values()
         }
     })
 end
+
+g.test_gh_108_fieldno_index_no_space_format = function()
+    box.schema.space.create('weird_space')
+    box.space['weird_space']:create_index('pk')
+
+    local schema, err = ddl.get_schema()
+    t.assert_equals(err, nil)
+    t.assert_equals(schema, {spaces = {weird_space = {
+        engine = "memtx",
+        format = {},
+        indexes = {
+            {
+                name = "pk",
+                parts = {{is_nullable = false, path = 1, type = "unsigned"}},
+                type = "TREE",
+                unique = true,
+            },
+        },
+        is_local = false,
+        temporary = false,
+    }}})
+
+    local _, err = ddl.check_schema(schema)
+    t.assert_equals(err, nil)
+end
+
+g.test_gh_108_fieldno_index_in_space_format = function()
+    box.schema.space.create('weird_space', {
+        format = {{name = 'id', type = 'unsigned', is_nullable = false}}
+    })
+    box.space['weird_space']:create_index('pk', {
+        unique = true,
+        parts = {{field = 1, type = 'unsigned', is_nullable = false}}
+    })
+
+    local schema, err = ddl.get_schema()
+    t.assert_equals(err, nil)
+    t.assert_equals(schema, {spaces = {weird_space = {
+        engine = "memtx",
+        format = {{is_nullable = false, name = "id", type = "unsigned"}},
+        indexes = {
+            {
+                name = "pk",
+                parts = {{is_nullable = false, path = "id", type = "unsigned"}},
+                type = "TREE",
+                unique = true,
+            },
+        },
+        is_local = false,
+        temporary = false,
+    }}})
+
+    local _, err = ddl.check_schema(schema)
+    t.assert_equals(err, nil)
+end
+
+g.test_gh_108_fieldno_index_outside_space_format = function()
+    box.schema.space.create('weird_space', {
+        format = {{name = 'id', type = 'unsigned', is_nullable = false}}
+    })
+    box.space['weird_space']:create_index('pk', {
+        unique = true,
+        parts = {{field = 2, type = 'string', is_nullable = false}}
+    })
+
+    local schema, err = ddl.get_schema()
+    t.assert_equals(err, nil)
+    t.assert_equals(schema, {spaces = {weird_space = {
+        engine = "memtx",
+        format = {{is_nullable = false, name = "id", type = "unsigned"}},
+        indexes = {
+            {
+                name = "pk",
+                parts = {{is_nullable = false, path = 2, type = "string"}},
+                type = "TREE",
+                unique = true,
+            },
+        },
+        is_local = false,
+        temporary = false,
+    }}})
+
+    local _, err = ddl.check_schema(schema)
+    t.assert_equals(err, nil)
+end

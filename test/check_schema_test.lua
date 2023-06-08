@@ -203,11 +203,7 @@ function g.test_index_part_path()
 
     local ok, err = ddl_check.check_index_part_path(nil, index_info, test_space_info)
     t.assert_not(ok)
-    t.assert_equals(err, "bad value (string expected, got nil)")
-
-    local ok, err = ddl_check.check_index_part_path(5, index_info, test_space_info)
-    t.assert_not(ok)
-    t.assert_equals(err, "bad value (string expected, got number)")
+    t.assert_equals(err, "bad value (string|number expected, got nil)")
 
 
     local ok, err = ddl_check.check_index_part_path('unsigned_nonnull', index_info, test_space_info)
@@ -1403,4 +1399,58 @@ function g.test_transactional_ddl()
         t.assert_not_equals(lsn3, lsn2)
     end
     t.assert_not(box.is_in_txn())
+end
+
+g.test_gh_108_fieldno_index_no_space_format = function()
+    local _, err = ddl.check_schema({spaces = {weird_space = {
+        engine = 'memtx',
+        is_local = false,
+        temporary = false,
+        format = {},
+        indexes = {{
+            name = 'pk',
+            type = 'TREE',
+            parts = {
+                {path = 1, type = 'unsigned', is_nullable = false},
+            },
+            unique = true,
+        }},
+    }}})
+    t.assert_equals(err, nil)
+end
+
+g.test_gh_108_fieldno_index_in_space_format = function()
+    local _, err = ddl.check_schema({spaces = {weird_space = {
+        engine = 'memtx',
+        is_local = false,
+        temporary = false,
+        format = {{name = 'id', type = 'unsigned', is_nullable = false}},
+        indexes = {{
+            name = 'pk',
+            type = 'TREE',
+            parts = {
+                {path = 1, type = 'unsigned', is_nullable = false},
+            },
+            unique = true,
+        }},
+    }}})
+    t.assert_equals(err, nil)
+end
+
+g.test_gh_108_fieldno_index_outside_space_format = function()
+    local _, err = ddl.check_schema({spaces = {weird_space = {
+        engine = 'memtx',
+        is_local = false,
+        temporary = false,
+        format = {{name = 'id', type = 'unsigned', is_nullable = false}},
+        indexes = {{
+            name = 'pk',
+            type = 'TREE',
+            parts = {
+                {path = 2, type = 'string', is_nullable = false},
+            },
+            unique = true,
+        }},
+    }}})
+    t.assert_equals(err, nil)
 end
