@@ -112,6 +112,10 @@ local function transactional_ddl_allowed()
     return tarantool_version_at_least(2, 2)
 end
 
+local function exclude_null_allowed()
+    return tarantool_version_at_least(2, 8, 1)
+end
+
 
 local function atomic_tail(status, ...)
     if not status then
@@ -151,6 +155,7 @@ return {
     multikey_path_allowed = multikey_path_allowed,
     transactional_ddl_allowed = transactional_ddl_allowed,
     datetime_allowed = datetime_allowed,
+    exclude_null_allowed = exclude_null_allowed,
 
     call_atomic = call_atomic,
     call_dry_run = call_dry_run,
