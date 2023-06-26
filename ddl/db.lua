@@ -1,40 +1,117 @@
-local function check_version(expected_major, expected_minor)
-    local db_major, db_minor = string.match(_TARANTOOL, '^(%d+)%.(%d+)')
-    local major, minor = tonumber(db_major), tonumber(db_minor)
+-- Utilities borrowed from tarantool/crud
+-- https://github.com/tarantool/crud/blob/2d3d47937fd02d938424659bc659fdc24a32dc8a/crud/common/utils.lua#L434-L555
 
-    if major < expected_major then
-        return false
-    elseif major > expected_major then
-        return true
+local function get_version_suffix(suffix_candidate)
+    if type(suffix_candidate) ~= 'string' then
+        return nil
     end
 
-    if minor < expected_minor then
-        return false
+    if suffix_candidate:find('^entrypoint$')
+    or suffix_candidate:find('^alpha%d$')
+    or suffix_candidate:find('^beta%d$')
+    or suffix_candidate:find('^rc%d$') then
+        return suffix_candidate
     end
+
+    return nil
+end
+
+local suffix_with_digit_weight = {
+    alpha = -3000,
+    beta  = -2000,
+    rc    = -1000,
+}
+
+local function get_version_suffix_weight(suffix)
+    if suffix == nil then
+        return 0
+    end
+
+    if suffix:find('^entrypoint$') then
+        return -math.huge
+    end
+
+    for header, weight in pairs(suffix_with_digit_weight) do
+        local pos, _, digits = suffix:find('^' .. header .. '(%d)$')
+        if pos ~= nil then
+            return weight + tonumber(digits)
+        end
+    end
+
+    error(('Unexpected suffix %q, parse with "utils.get_version_suffix" first'):format(suffix))
+end
+
+local function is_version_ge(major, minor,
+                             patch, suffix,
+                             major_to_compare, minor_to_compare,
+                             patch_to_compare, suffix_to_compare)
+    major = major or 0
+    minor = minor or 0
+    patch = patch or 0
+    local suffix_weight = get_version_suffix_weight(suffix)
+
+    major_to_compare = major_to_compare or 0
+    minor_to_compare = minor_to_compare or 0
+    patch_to_compare = patch_to_compare or 0
+    local suffix_weight_to_compare = get_version_suffix_weight(suffix_to_compare)
+
+    if major > major_to_compare then return true end
+    if major < major_to_compare then return false end
+
+    if minor > minor_to_compare then return true end
+    if minor < minor_to_compare then return false end
+
+    if patch > patch_to_compare then return true end
+    if patch < patch_to_compare then return false end
+
+    if suffix_weight > suffix_weight_to_compare then return true end
+    if suffix_weight < suffix_weight_to_compare then return false end
+
     return true
 end
 
+local function get_tarantool_version()
+    local version_parts = rawget(_G, '_TARANTOOL'):split('-', 1)
+
+    local major_minor_patch_parts = version_parts[1]:split('.', 2)
+    local major = tonumber(major_minor_patch_parts[1])
+    local minor = tonumber(major_minor_patch_parts[2])
+    local patch = tonumber(major_minor_patch_parts[3])
+
+    local suffix = get_version_suffix(version_parts[2])
+
+    return major, minor, patch, suffix
+end
+
+local function tarantool_version_at_least(wanted_major, wanted_minor, wanted_patch)
+    local major, minor, patch, suffix = get_tarantool_version()
+
+    return is_version_ge(major, minor, patch, suffix,
+                         wanted_major, wanted_minor, wanted_patch, nil)
+end
+
+
 local function json_path_allowed()
-    return check_version(2, 1)
+    return tarantool_version_at_least(2, 1)
 end
 
 local function multikey_path_allowed()
-    return check_version(2, 2)
+    return tarantool_version_at_least(2, 2)
 end
 
 local function varbinary_allowed()
-    return check_version(2, 2)
+    return tarantool_version_at_least(2, 2)
 end
 
 local function datetime_allowed()
-    return check_version(2, 10)
+    return tarantool_version_at_least(2, 10)
 end
-
 
 -- https://github.com/tarantool/tarantool/issues/4083
 local function transactional_ddl_allowed()
-    return check_version(2, 2)
+    return tarantool_version_at_least(2, 2)
 end
+
 
 local function atomic_tail(status, ...)
     if not status then
