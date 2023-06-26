@@ -1,6 +1,7 @@
 #!/usr/bin/env tarantool
 
 local t = require('luatest')
+local utils = require('luatest.utils')
 local db = require('test.db')
 local ddl = require('ddl')
 local log = require('log')
@@ -1386,4 +1387,41 @@ g.test_gh_108_fieldno_index_outside_space_format = function()
 
     t.assert_equals(box.space['weird_space']:insert{1, 'val'}, {1, 'val'})
     t.assert_equals(box.space['weird_space']:insert{2, 'val2', 3}, {2, 'val2', 3})
+end
+
+g.test_exclude_null = function()
+    local version = utils.get_tarantool_version()
+    t.skip_if(utils.version_ge(utils.version(2, 8, 1), version),
+        'Tarantool does not support exclude_null')
+
+    local _, err = ddl.set_schema({spaces = {my_space = {
+        engine = 'memtx',
+        is_local = false,
+        temporary = false,
+        format = {
+            {name = 'id', type = 'unsigned', is_nullable = false},
+            {name = 'field', type = 'string', is_nullable = true},
+        },
+        indexes = {
+            {
+                name = 'pk',
+                type = 'TREE',
+                parts = {
+                    {path = 'id', type = 'unsigned', is_nullable = false},
+                },
+                unique = true,
+            },
+            {
+                name = 'nullable_index',
+                type = 'TREE',
+                parts = {
+                    {path = 'field', type = 'string', is_nullable = true, exclude_null = true},
+                },
+                unique = true,
+            }
+        },
+    }}})
+    t.assert_equals(err, nil)
+
+    t.assert_equals(box.space['my_space'].index['nullable_index'].parts[1].exclude_null, true)
 end

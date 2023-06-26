@@ -9,6 +9,7 @@ local function create_index(box_space, ddl_index)
             ddl_index_part.path, ddl_index_part.type,
             is_nullable = ddl_index_part.is_nullable,
             collation = ddl_index_part.collation,
+            exclude_null = ddl_index_part.exclude_null,
         }
         table.insert(index_parts, index_part)
     end

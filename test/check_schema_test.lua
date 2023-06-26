@@ -1,6 +1,7 @@
 #!/usr/bin/env tarantool
 
 local t = require('luatest')
+local utils = require('luatest.utils')
 local db = require('test.db')
 local ddl_check = require('ddl.check')
 local ddl = require('ddl')
@@ -1453,4 +1454,136 @@ g.test_gh_108_fieldno_index_outside_space_format = function()
         }},
     }}})
     t.assert_equals(err, nil)
+end
+
+local function get_nullable_field_schema(second_index)
+    return {spaces = {my_space = {
+        engine = 'memtx',
+        is_local = false,
+        temporary = false,
+        format = {
+            {name = 'id', type = 'unsigned', is_nullable = false},
+            {name = 'field', type = 'string', is_nullable = true},
+        },
+        indexes = {
+            {
+                name = 'pk',
+                type = 'TREE',
+                parts = {
+                    {path = 'id', type = 'unsigned', is_nullable = false},
+                },
+                unique = true,
+            },
+            second_index,
+        },
+    }}}
+end
+
+g.test_exclude_null = function()
+    local version = utils.get_tarantool_version()
+    t.skip_if(utils.version_ge(utils.version(2, 8, 1), version),
+        'Tarantool does not support exclude_null')
+
+    local schema = get_nullable_field_schema({
+        name = 'nullable_index',
+        type = 'TREE',
+        parts = {
+            {path = 'field', type = 'string', is_nullable = true, exclude_null = true},
+        },
+        unique = true,
+    })
+    local _, err = ddl.set_schema(schema)
+    t.assert_equals(err, nil)
+end
+
+g.test_exclude_null_invalid_param = function()
+    local version = utils.get_tarantool_version()
+    t.skip_if(utils.version_ge(utils.version(2, 8, 1), version),
+        'Tarantool does not support exclude_null')
+
+    local schema = get_nullable_field_schema({
+        name = 'nullable_index',
+        type = 'TREE',
+        parts = {
+            {path = 'field', type = 'string', is_nullable = true, exclude_null = 1},
+        },
+        unique = true,
+    })
+    local _, err = ddl.set_schema(schema)
+    t.assert_str_contains(err, 'spaces["my_space"].indexes["nullable_index"].parts[1].exclude_null: ' ..
+                               'bad value (boolean expected, got number)')
+end
+
+g.test_exclude_null_invalid_index_type = function()
+    local version = utils.get_tarantool_version()
+    t.skip_if(utils.version_ge(utils.version(2, 8, 1), version),
+        'Tarantool does not support exclude_null')
+
+    local schema = get_nullable_field_schema({
+        name = 'nullable_index',
+        type = 'HASH',
+        parts = {
+            {path = 'field', type = 'string', is_nullable = true, exclude_null = true},
+        },
+        unique = true,
+    })
+    local _, err = ddl.set_schema(schema)
+    t.assert_str_contains(err, 'spaces["my_space"].indexes["nullable_index"].parts[1]: ' ..
+                               'exclude_null isn\'t allowed for a HASH index')
+end
+
+g.test_exclude_null_invalid_nullability = function()
+    local version = utils.get_tarantool_version()
+    t.skip_if(utils.version_ge(utils.version(2, 8, 1), version),
+        'Tarantool does not support exclude_null')
+
+    local schema = {spaces = {my_space = {
+        engine = 'memtx',
+        is_local = false,
+        temporary = false,
+        format = {
+            {name = 'id', type = 'unsigned', is_nullable = false},
+            {name = 'field', type = 'string', is_nullable = false},
+        },
+        indexes = {
+            {
+                name = 'pk',
+                type = 'TREE',
+                parts = {
+                    {path = 'id', type = 'unsigned', is_nullable = false},
+                },
+                unique = true,
+            },
+            {
+                name = 'nullable_index',
+                type = 'TREE',
+                parts = {
+                    {path = 'field', type = 'string', is_nullable = false, exclude_null = true},
+                },
+                unique = true,
+            },
+        },
+    }}}
+
+    local _, err = ddl.set_schema(schema)
+    t.assert_str_contains(err, 'spaces["my_space"].indexes["nullable_index"].parts[1]: ' ..
+                               'exclude_null=true and is_nullable=false are incompatible')
+end
+
+g.test_exclude_null_unsupported = function()
+    local version = utils.get_tarantool_version()
+    t.skip_if(utils.version_ge(version, utils.version(2, 8, 1)),
+        'Tarantool supports exclude_null')
+
+    local schema = get_nullable_field_schema({
+        name = 'nullable_index',
+        type = 'TREE',
+        parts = {
+            {path = 'field', type = 'string', is_nullable = true, exclude_null = true},
+        },
+        unique = true,
+    })
+    local _, err = ddl.set_schema(schema)
+    t.assert_str_contains(err, 'spaces["my_space"].indexes["nullable_index"].parts[1]: ' ..
+                               'exclude_null isn\'t allowed in your Tarantool version')
 end

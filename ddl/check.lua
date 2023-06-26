@@ -386,9 +386,47 @@ local function check_index_part(i, index, space)
         end
     end
 
+    do -- check exclude_null has correct format
+        if part.exclude_null ~= nil and type(part.exclude_null) ~= 'boolean' then
+            return nil, string.format(
+                "spaces[%q].indexes[%q].parts[%d].exclude_null: bad value" ..
+                " (boolean expected, got %s)",
+                space.name, index.name, i, type(part.exclude_null)
+            )
+        end
+    end
+
+    do -- check exclude_null support
+        if not db.exclude_null_allowed() and part.exclude_null ~= nil then
+            return nil, string.format(
+                "spaces[%q].indexes[%q].parts[%d]: exclude_null" ..
+                " isn't allowed in your Tarantool version (%s)",
+                space.name, index.name, i, _TARANTOOL
+            )
+        end
+
+        if part.exclude_null == true and index.type ~= 'TREE' then
+            return nil, string.format(
+                "spaces[%q].indexes[%q].parts[%d]: exclude_null" ..
+                " isn't allowed for a %s index",
+                space.name, index.name, i, index.type
+            )
+        end
+    end
+
+    do -- check that exclude_null and field nullability is compatible
+        if part.exclude_null == true and part.is_nullable == false then
+            return nil, string.format(
+                "spaces[%q].indexes[%q].parts[%d]:" ..
+                " exclude_null=true and is_nullable=false are incompatible",
+                space.name, index.name, i
+            )
+        end
+    end
+
     do -- check redundant keys
         local k = utils.redundant_key(part,
-            {'path', 'type', 'collation', 'is_nullable'}
+            {'path', 'type', 'collation', 'is_nullable', 'exclude_null'}
         )
         if k ~= nil then
             return nil, string.format(
