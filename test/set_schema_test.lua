@@ -1327,9 +1327,15 @@ g.test_gh_108_fieldno_index_no_space_format = function()
     t.assert_equals(err, nil)
 
     t.assert_equals(box.space['weird_space']:format(), {})
-    t.assert_equals(
-        box.space['weird_space'].index['pk'].parts,
-        {{fieldno = 1, type = 'unsigned', is_nullable = false}})
+
+    -- Tarantool may return is_nullable as `nil` or as `false`, depending on the
+    -- version (see tarantool/tarantool#8649 for details). Allow both variants.
+    local expected_variants = {
+        {{fieldno = 1, type = 'unsigned', is_nullable = false}},
+        {{fieldno = 1, type = 'unsigned', is_nullable = false,
+          exclude_null = false}}}
+    t.assert_items_include(expected_variants,
+                           {box.space['weird_space'].index['pk'].parts})
 
     t.assert_equals(box.space['weird_space']:insert{1}, {1})
     t.assert_equals(box.space['weird_space']:insert{2, 'val'}, {2, 'val'})
@@ -1354,9 +1360,15 @@ g.test_gh_108_fieldno_index_in_space_format = function()
 
     t.assert_equals(box.space['weird_space']:format(),
         {{is_nullable = false, name = "id", type = "unsigned"}})
-    t.assert_equals(
-        box.space['weird_space'].index['pk'].parts,
-        {{fieldno = 1, type = 'unsigned', is_nullable = false}})
+
+    -- Tarantool may return is_nullable as `nil` or as `false`, depending on the
+    -- version (see tarantool/tarantool#8649 for details). Allow both variants.
+    local expected_variants = {
+        {{fieldno = 1, type = 'unsigned', is_nullable = false}},
+        {{fieldno = 1, type = 'unsigned', is_nullable = false,
+          exclude_null = false}}}
+    t.assert_items_include(expected_variants,
+                           {box.space['weird_space'].index['pk'].parts})
 
     t.assert_equals(box.space['weird_space']:insert{1}, {1})
     t.assert_equals(box.space['weird_space']:insert{2, 'val'}, {2, 'val'})
@@ -1381,9 +1393,15 @@ g.test_gh_108_fieldno_index_outside_space_format = function()
 
     t.assert_equals(box.space['weird_space']:format(),
         {{is_nullable = false, name = "id", type = "unsigned"}})
-    t.assert_equals(
-        box.space['weird_space'].index['pk'].parts,
-        {{fieldno = 2, type = 'string', is_nullable = false}})
+
+    -- Tarantool may return is_nullable as `nil` or as `false`, depending on the
+    -- version (see tarantool/tarantool#8649 for details). Allow both variants.
+    local expected_variants = {
+        {{fieldno = 2, type = 'string', is_nullable = false}},
+        {{fieldno = 2, type = 'string', is_nullable = false,
+          exclude_null = false}}}
+    t.assert_items_include(expected_variants,
+                           {box.space['weird_space'].index['pk'].parts})
 
     t.assert_equals(box.space['weird_space']:insert{1, 'val'}, {1, 'val'})
     t.assert_equals(box.space['weird_space']:insert{2, 'val2', 3}, {2, 'val2', 3})
