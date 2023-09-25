@@ -299,11 +299,11 @@ local schema = {
 ## Building and testing
 
 ```bash
-tarantoolctl rocks make
+tt rocks make
 ```
 
 ```bash
-tarantoolctl rocks install luatest 0.3.0
-tarantoolctl rocks install luacheck 0.25.0
+tt rocks install luatest 0.5.7
+tt rocks install luacheck 0.25.0
 make test -C build.luarocks ARGS="-V"
 ```
