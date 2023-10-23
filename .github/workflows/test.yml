@@ -9,10 +9,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tarantool: ['1.10', '2.5', '2.6', '2.7']
+        tarantool: ['1.10', '2.5', '2.6', '2.7', '2.8', '2.10']
         coveralls: [false]
         include:
-          - tarantool: '2.8'
+          - tarantool: '2.11'
             coveralls: true
     # There are problems with current version of the
     # setup-tarantool action on Ubuntu Jammy (ubuntu-latest or
@@ -22,14 +22,15 @@ jobs:
     # [1]: https://github.com/tarantool/setup-tarantool/issues/36
     runs-on: [ubuntu-20.04]
     steps:
-      - uses: actions/checkout@v2
-      - uses: tarantool/setup-tarantool@v1
+      - uses: actions/checkout@v4
+
+      - uses: tarantool/setup-tarantool@v2
         with:
           tarantool-version: ${{ matrix.tarantool }}
 
       # Setup luatest and luacheck
       - name: Cache rocks
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-rocks
         with:
           path: .rocks/
@@ -76,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tarantool: ['1.10', '2.5', '2.6', '2.7']
+        tarantool: ['2.11']
     # There are problems with current version of the
     # setup-tarantool action on Ubuntu Jammy (ubuntu-latest or
     # ubuntu-22.04). Use Ubuntu Focal (ubuntu-20.04) until they
@@ -85,14 +86,15 @@ jobs:
     # [1]: https://github.com/tarantool/setup-tarantool/issues/36
     runs-on: [ubuntu-20.04]
     steps:
-      - uses: actions/checkout@v2
-      - uses: tarantool/setup-tarantool@v1
+      - uses: actions/checkout@v4
+
+      - uses: tarantool/setup-tarantool@v2
         with:
           tarantool-version: ${{ matrix.tarantool }}
 
       # Setup luatest
       - name: Cache rocks
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-rocks
         with:
           path: .rocks/
