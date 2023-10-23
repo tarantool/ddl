@@ -28,34 +28,35 @@ jobs:
         with:
           tarantool-version: ${{ matrix.tarantool }}
 
+      - name: Prepare apt repo
+        run: curl -L https://tarantool.io/release/2/installer.sh | bash
+
+      - name: Install tt cli
+        run: sudo apt install -y tt
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
       # Setup luatest and luacheck
       - name: Cache rocks
         uses: actions/cache@v3
         id: cache-rocks
         with:
           path: .rocks/
-          key: cache-rocks-${{ matrix.runs-on }}-06
-      -
-        run: tarantoolctl rocks install luacheck
+          key: cache-rocks-${{ matrix.runs-on }}-07
+
+      - name: Install test dependencies
+        run: ./deps.sh
         if: steps.cache-rocks.outputs.cache-hit != 'true'
-      -
-        run: tarantoolctl rocks install luatest
-        if: steps.cache-rocks.outputs.cache-hit != 'true'
-      -
-        run: tarantoolctl rocks install luacov
-        if: steps.cache-rocks.outputs.cache-hit != 'true'
-      -
-        run: tarantoolctl rocks install luacov-coveralls 0.2.3-1 --server=https://luarocks.org
-        if: steps.cache-rocks.outputs.cache-hit != 'true'
+      
       - run: echo $PWD/.rocks/bin >> $GITHUB_PATH
 
-      - run: tarantoolctl rocks list
-      - run: tarantoolctl rocks install cartridge
+      - run: tt rocks list
+      - run: tt rocks install cartridge
         env:
           CMAKE_DUMMY_WEBUI: true
-      - run: tarantoolctl rocks remove ddl --force
+      - run: tt rocks remove ddl --force
 
-      - run: tarantoolctl rocks make
+      - run: tt rocks make
       - run: cmake -S . -B build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,8 +72,8 @@ jobs:
         if: ${{ matrix.coveralls }}
 
       # Cleanup cached paths
-      - run: tarantoolctl rocks remove cartridge
-      - run: tarantoolctl rocks remove ddl
+      - run: tt rocks remove cartridge
+      - run: tt rocks remove ddl
   benchmark:
     strategy:
       fail-fast: false
@@ -92,6 +93,14 @@ jobs:
         with:
           tarantool-version: ${{ matrix.tarantool }}
 
+      - name: Prepare apt repo
+        run: curl -L https://tarantool.io/release/2/installer.sh | bash
+
+      - name: Install tt cli
+        run: sudo apt install -y tt
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
       # Setup luatest
       - name: Cache rocks
         uses: actions/cache@v3
@@ -100,7 +109,7 @@ jobs:
           path: .rocks/
           key: cache-rocks-${{ matrix.runs-on }}-bench-01
 
-      - run: tarantoolctl rocks install luatest
+      - run: tt rocks install luatest
         if: steps.cache-rocks.outputs.cache-hit != 'true'
 
       - run: tarantool ./test/bench_cache.lua
