@@ -59,6 +59,7 @@ local function check_field(i, field, space)
             double    = true,
             uuid      = true,
             datetime  = true,
+            interval  = true,
         }
 
         if known_field_types[field.type] == nil then
@@ -78,6 +79,13 @@ local function check_field(i, field, space)
         if not db.datetime_allowed() and field.type == 'datetime' then
             return nil, string.format(
                 "spaces[%q].format[%q].type: datetime type isn't allowed in your Tarantool version (%s)",
+                space.name, field.name, _TARANTOOL
+            )
+        end
+
+        if not db.interval_allowed() and field.type == 'interval' then
+            return nil, string.format(
+                "spaces[%q].format[%q].type: interval type isn't allowed in your Tarantool version (%s)",
                 space.name, field.name, _TARANTOOL
             )
         end
@@ -214,6 +222,17 @@ local function check_index_part_type(part_type, index_type)
         uuid = true,
         datetime = true,
     }
+
+    local known_unsupported_part_types = {
+        interval = true,
+    }
+
+    if known_unsupported_part_types[part_type] then
+        return nil, string.format(
+            "%s field type is unsupported in indexes",
+            part_type
+        )
+    end
 
     if not known_part_types[part_type] then
         return nil, string.format(

@@ -54,6 +54,11 @@ function helpers.test_space_format()
         table.insert(space_format, {name = 'datetime_nullable', type = 'datetime', is_nullable = true})
     end
 
+    if db.v(2, 10) then
+        table.insert(space_format, {name = 'interval_nonnull', type = 'interval', is_nullable = false})
+        table.insert(space_format, {name = 'interval_nullable', type = 'interval', is_nullable = true})
+    end
+
     return table.deepcopy(space_format)
 end
 
