@@ -112,7 +112,8 @@ format = {
                     type = 'unsigned' | 'string' | 'varbinary' |
                             'integer' | 'number' | 'boolean' |
                             'array' | 'scalar' | 'any' | 'map' |
-                            'decimal' | 'double' | 'uuid' | 'datetime'
+                            'decimal' | 'double' | 'uuid' | 'datetime' |
+                            'interval'
                 },
                 ...
             },
