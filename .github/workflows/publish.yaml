@@ -36,11 +36,19 @@ jobs:
         with:
           tarantool-version: '2.11'
 
+      - name: Prepare apt repo
+        run: curl -L https://tarantool.io/release/2/installer.sh | bash
+
+      - name: Install tt cli
+        run: sudo apt install -y tt
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
       # Make a release
       - run: echo TAG=${GITHUB_REF##*/} >> $GITHUB_ENV
-      - run: tarantoolctl rocks new_version --tag ${{ env.TAG }}
-      - run: tarantoolctl rocks install ddl-${{ env.TAG }}-1.rockspec
-      - run: tarantoolctl rocks pack ddl ${{ env.TAG }}
+      - run: tt rocks new_version --tag ${{ env.TAG }}
+      - run: tt rocks install ddl-${{ env.TAG }}-1.rockspec
+      - run: tt rocks pack ddl ${{ env.TAG }}
 
       - uses: tarantool/rocks.tarantool.org/github-action@master
         with:
