@@ -31,6 +31,12 @@ jobs:
           sudo dpkg -i tarantool_*.deb tarantool-common_*.deb tarantool-dev_*.deb
           tarantool --version
 
+      - name: Setup tt
+        run: |
+          curl -L https://tarantool.io/release/2/installer.sh | sudo bash
+          sudo apt install -y tt
+          tt version
+
       - name: Install requirements
         run: ./deps.sh
 
