@@ -3,10 +3,11 @@
 
 set -e
 
+TTCTL=tt
+
 if ! [ -x "$(command -v tt)" ]; then
-	TTCTL=tarantoolctl
-else
-	TTCTL=tt
+    echo "error: tt is not found" >&2
+    exit 1
 fi
 
 # Test dependencies:
