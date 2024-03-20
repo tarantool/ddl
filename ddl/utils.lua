@@ -49,12 +49,22 @@ local LUA_KEYWORDS = {
     ['while'] = true,
 }
 
+local function is_number(v)
+    local is_lua_number = type(v) == 'number'
+
+    local is_lj_uint = type(v) == 'cdata' and ffi.istype('uint64_t', v)
+    local is_lj_int = type(v) == 'cdata' and ffi.istype('int64_t', v)
+    local is_lj_number = is_lj_uint or is_lj_int
+
+    return is_lua_number or is_lj_number
+end
+
 local function deepcmp(got, expected, extra)
     if extra == nil then
         extra = {}
     end
 
-    if type(expected) == "number" or type(got) == "number" then
+    if is_number(expected) or is_number(got) then
         extra.got = got
         extra.expected = expected
         if got ~= got and expected ~= expected then
@@ -213,13 +223,25 @@ local function get_G_function(func_name)
     return sharding_func
 end
 
+local function concat_arrays(arr1, arr2)
+    local res = table.deepcopy(arr1)
+
+    for _, v in ipairs(arr2) do
+        table.insert(res, table.deepcopy(v))
+    end
+
+    return res
+end
+
 return {
     deepcmp = deepcmp,
     is_array = is_array,
+    is_number = is_number,
     redundant_key = redundant_key,
     find_first_duplicate = find_first_duplicate,
     lj_char_isident = lj_char_isident,
     lj_char_isdigit = lj_char_isdigit,
     LUA_KEYWORDS = LUA_KEYWORDS,
     get_G_function = get_G_function,
+    concat_arrays = concat_arrays,
 }

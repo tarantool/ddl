@@ -547,7 +547,6 @@ function g.test_with_function_index()
 end
 
 function g.test_sequence_index()
-    t.skip('Not implemented yet')
     g.space = box.schema.space.create('with_sequence')
     g.space:format({
         {name = 'seq_id', type = 'unsigned', is_nullable = false},
@@ -555,6 +554,7 @@ function g.test_sequence_index()
         {name = 'second', type = 'string', is_nullable = false},
     })
 
+    local seq_name = 'seq'
     local seq_opts = {
         start = 1,
         min = 0,
@@ -563,37 +563,41 @@ function g.test_sequence_index()
         cache = 0,
         step = 5,
     }
-    box.schema.sequence.create('seq', seq_opts)
+    box.schema.sequence.create(seq_name, seq_opts)
+
     g.space:create_index('seq_index', {
         type = 'TREE',
         unique = true,
-        sequence = 'seq'
+        sequence = seq_name,
     })
 
     local res = ddl.get_schema()
-    local seq_info = seq_opts
-    seq_info.name = 'seq'
 
-    t.assert_equals(res.spaces,  {
-        ['with_sequence'] = {
-            engine = 'memtx',
-            is_local = false,
-            temporary = false,
-            format = {
-                {name = 'seq_id', type = 'unsigned', is_nullable = false},
-                {name = 'first', type = 'string', is_nullable = false},
-                {name = 'second', type = 'string', is_nullable = false},
+    t.assert_equals(res, {
+        spaces = {
+            ['with_sequence'] = {
+                engine = 'memtx',
+                is_local = false,
+                temporary = false,
+                format = {
+                    {name = 'seq_id', type = 'unsigned', is_nullable = false},
+                    {name = 'first', type = 'string', is_nullable = false},
+                    {name = 'second', type = 'string', is_nullable = false},
+                },
+                indexes = {
+                    {
+                        name = 'seq_index',
+                        type = 'TREE',
+                        unique = true,
+                        parts = {{is_nullable = false, path = 'seq_id', type = 'unsigned'}},
+                        sequence = seq_name,
+                    },
+                },
             },
-            indexes = {
-                {
-                    name = 'seq_index',
-                    type = 'TREE',
-                    unique = true,
-                    parts = {{is_nullable = false, path = 'seq_id', type = 'unsigned'}},
-                    sequence = seq_info,
-                }
-            }
-        }
+        },
+        sequences = {
+            [seq_name] = seq_opts,
+        },
     })
 end
 

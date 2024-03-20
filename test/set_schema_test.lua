@@ -117,10 +117,10 @@ function g.test_invalid_schema()
         'functions: not supported'
     )
 
-    local res, err = ddl.set_schema({spaces = {}, sequences = {}})
+    local res, err = ddl.set_schema({spaces = {}, sequences = true})
     t.assert_not(res)
     t.assert_equals(err,
-        'sequences: not supported'
+        'sequences: must be a table or nil, got boolean'
     )
 
     local res, err = ddl.set_schema({spaces = {}, meta = {}})

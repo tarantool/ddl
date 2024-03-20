@@ -37,6 +37,25 @@ local function _get_index_parts(space, index_part)
     return ddl_index_part
 end
 
+local function get_sequence_by_id(id)
+    if box.sequence[id] ~= nil then
+        return box.sequence[id]
+    end
+
+    -- For some reason, Tarantool 1.10 indexes box.sequence only by name.
+    local sequence_tuple = box.space._sequence:get(id)
+    if sequence_tuple == nil then
+        return nil
+    end
+
+    local name = sequence_tuple.name
+    if name == nil then
+        return nil
+    end
+
+    return box.sequence[name]
+end
+
 local function _get_index(box_space, box_index)
     local ddl_index = {}
     ddl_index.name = box_index.name
@@ -51,6 +70,16 @@ local function _get_index(box_space, box_index)
     if box_index.type == 'RTREE' then
         ddl_index.dimension = box_index.dimension
         ddl_index.distance = box.space._index:get({box_space.id, box_index.id}).opts.distance or 'euclid'
+    end
+
+    local sequence_id = box_index.sequence_id
+    if sequence_id ~= nil then
+        local sequence = get_sequence_by_id(sequence_id)
+
+        -- box should keep there two consistent, so assert here.
+        assert(sequence ~= nil, "missing sequence")
+
+        ddl_index.sequence = sequence.name
     end
 
     return ddl_index
@@ -168,8 +197,24 @@ local function bucket_id(space_name, sharding_key)
     return id
 end
 
+local function get_sequence_schema(sequence_name)
+    local box_sequence = box.sequence[sequence_name]
+    assert(box_sequence ~= nil)
+
+    return {
+        start = box_sequence.start,
+        min = box_sequence.min,
+        max = box_sequence.max,
+        cycle = box_sequence.cycle,
+        cache = box_sequence.cache,
+        step = box_sequence.step,
+    }
+end
+
 return {
     get_space_schema = get_space_schema,
+    get_sequence_schema = get_sequence_schema,
+    get_sequence_by_id = get_sequence_by_id,
     internal = {
         bucket_id = bucket_id,
     }

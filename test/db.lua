@@ -16,10 +16,22 @@ local function init()
     }
 end
 
-local function drop_all()
+local function drop_all_non_system_spaces()
     for _, space in box.space._space:pairs({box.schema.SYSTEM_ID_MAX}, {iterator = "GT"}) do
         box.space[space.name]:drop()
     end
+end
+
+local function drop_all_sequences()
+    for _, seq in box.space._sequence:pairs() do
+        print(('dropping %q'):format(seq.name))
+        box.sequence[seq.name]:drop()
+    end
+end
+
+local function drop_all()
+    drop_all_non_system_spaces()
+    drop_all_sequences()
 end
 
 -- Check if tarantool version >= required

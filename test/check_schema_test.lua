@@ -1608,3 +1608,143 @@ g.test_exclude_null_unsupported = function()
     t.assert_str_contains(err, 'spaces["my_space"].indexes["nullable_index"].parts[1]: ' ..
                                'exclude_null isn\'t allowed in your Tarantool version')
 end
+
+g.test_index_invalid_sequence = function()
+    local schema = {
+        spaces = {
+            ['with_sequence'] = {
+                engine = 'memtx',
+                is_local = false,
+                temporary = false,
+                format = {
+                    {name = 'seq_id', type = 'unsigned', is_nullable = false},
+                    {name = 'first', type = 'string', is_nullable = false},
+                    {name = 'second', type = 'string', is_nullable = false},
+                },
+                indexes = {
+                    {
+                        name = 'seq_index',
+                        type = 'TREE',
+                        unique = true,
+                        parts = {{is_nullable = false, path = 'seq_id', type = 'unsigned'}},
+                        sequence = true,
+                    },
+                },
+            },
+        },
+    }
+
+    local _, err = ddl.set_schema(schema)
+    t.assert_str_contains(err, 'spaces["with_sequence"].indexes["seq_index"].sequence: ' ..
+                               'incorrect value (string expected, got boolean)')
+end
+
+g.test_index_sequence_is_not_in_schema = function()
+    local schema = {
+        spaces = {
+            ['with_sequence'] = {
+                engine = 'memtx',
+                is_local = false,
+                temporary = false,
+                format = {
+                    {name = 'seq_id', type = 'unsigned', is_nullable = false},
+                    {name = 'first', type = 'string', is_nullable = false},
+                    {name = 'second', type = 'string', is_nullable = false},
+                },
+                indexes = {
+                    {
+                        name = 'seq_index',
+                        type = 'TREE',
+                        unique = true,
+                        parts = {{is_nullable = false, path = 'seq_id', type = 'unsigned'}},
+                        sequence = 'seq1',
+                    },
+                },
+            },
+        },
+        sequences = {
+            ['seq2'] = {},
+        },
+    }
+
+    local _, err = ddl.set_schema(schema)
+    t.assert_str_contains(err, 'spaces["with_sequence"].indexes["seq_index"].sequence: ' ..
+                               'missing sequence "seq1" in sequences section')
+end
+
+g.test_sequences_invalid_key = function()
+    local schema = {
+        spaces = {},
+        sequences = {
+            [1] = {},
+        },
+    }
+
+    local _, err = ddl.set_schema(schema)
+    t.assert_str_contains(err, 'sequences[1]: invalid sequence name (string expected, got number)')
+end
+
+g.test_sequences_invalid_options = function()
+    local schema = {
+        spaces = {},
+        sequences = {
+            ['seq'] = true,
+        },
+    }
+
+    local _, err = ddl.set_schema(schema)
+    t.assert_str_contains(err, 'sequences["seq"]: bad value (table expected, got boolean)')
+end
+
+local sequence_invalid_option_cases = {
+    start = {
+        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'start' should be of type number",
+    },
+    min = {
+        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'min' should be of type number",
+    },
+    max = {
+        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'max' should be of type number",
+    },
+    cache = {
+        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'cache' should be of type number",
+    },
+    step = {
+        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'step' should be of type number",
+    },
+    cycle = {
+        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'cycle' should be of type boolean",
+    },
+}
+
+for option_key, case in pairs(sequence_invalid_option_cases) do
+    local test_name = ('test_sequences_invalid_option_%s_value'):format(option_key)
+
+    g[test_name] = function()
+        local schema = {
+            spaces = {},
+            sequences = {
+                ['seq'] = {
+                    [option_key] = 'invalid',
+                },
+            },
+        }
+
+        local _, err = ddl.set_schema(schema)
+        t.assert_str_contains(err, case.err)
+    end
+end
+
+g.test_sequences_unknown_option = function()
+    local schema = {
+        spaces = {},
+        sequences = {
+            ['seq'] = {
+                random = true,
+            },
+        },
+    }
+
+    local _, err = ddl.set_schema(schema)
+    t.assert_str_contains(err, 'sequences["seq"]: redundant key "random"')
+end

@@ -1,3 +1,20 @@
+local function create_sequence(sequence_name, sequence_schema, opts)
+    local is_dummy = opts and opts.dummy
+    if is_dummy then
+        sequence_name = '_ddl_dummy'
+    end
+
+    local ok, err = pcall(box.schema.sequence.create, sequence_name, sequence_schema)
+
+    if not ok then
+        error(
+            string.format("sequences[%q]: %s", sequence_name, err), 0
+        )
+    end
+
+    return true
+end
+
 local function create_index(box_space, ddl_index)
     if ddl_index.parts == nil then
         error("index parts is nil")
@@ -14,17 +31,11 @@ local function create_index(box_space, ddl_index)
         table.insert(index_parts, index_part)
     end
 
-    local sequence_name = nil
-    if ddl_index.sequence ~= nil then
-        local sequence = box.schema.sequence.create(ddl_index.sequence)
-        sequence_name = sequence.name
-    end
-
     box_space:create_index(ddl_index.name, {
         type = ddl_index.type,
         unique = ddl_index.unique,
         parts = index_parts,
-        sequence = sequence_name,
+        sequence = ddl_index.sequence,
         dimension = ddl_index.dimension,
         distance = ddl_index.distance,
         func = ddl_index.func and ddl_index.func.name,
@@ -69,13 +80,36 @@ local function create_space(space_name, space_schema, opts)
     end
 
     local box_space = data
+
+    local dummy_sequences = {}
+
     for i, index in ipairs(space_schema.indexes) do
+        if is_dummy and index.sequence ~= nil then
+            index = table.deepcopy(index)
+
+            local next_dummy_sequence = ('_dummy_seq_%d'):format(#dummy_sequences + 1)
+            box.schema.sequence.create(next_dummy_sequence)
+            index.sequence = next_dummy_sequence
+            table.insert(dummy_sequences, next_dummy_sequence)
+        end
+
         local ok, data = pcall(create_index, box_space, index)
         if not ok then
             error(string.format(
                 "spaces[%q].indexes[%q]: %s",  space_name, index.name or i,
                 data
             ), 0)
+        end
+    end
+
+    if is_dummy and #dummy_sequences > 0 then
+        -- Indexes reference sequences.
+        for i, index in ipairs(space_schema.indexes) do
+            box_space.index[index.name or i]:drop()
+        end
+
+        for _, name in ipairs(dummy_sequences) do
+            box.schema.sequence.drop(name)
         end
     end
 
@@ -105,4 +139,5 @@ end
 
 return {
     create_space = create_space,
+    create_sequence = create_sequence,
 }
