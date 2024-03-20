@@ -2,6 +2,7 @@ local ddl_get = require('ddl.get')
 local ddl_set = require('ddl.set')
 local ddl_check = require('ddl.check')
 local ddl_db = require('ddl.db')
+local ddl_compare = require('ddl.compare')
 local utils = require('ddl.utils')
 
 local function check_schema_format(schema)
@@ -22,12 +23,14 @@ local function check_schema_format(schema)
         return nil, string.format("functions: not supported")
     end
 
-    if type(schema.sequences) ~= 'nil' then
-        return nil, string.format("sequences: not supported")
+    if type(schema.sequences) ~= 'nil' and type(schema.sequences) ~= 'table' then
+        return nil, string.format(
+            "sequences: must be a table or nil, got %s", type(schema.sequences)
+        )
     end
 
     do -- check redundant keys
-        local k = utils.redundant_key(schema, {'spaces'})
+        local k = utils.redundant_key(schema, {'spaces', 'sequences'})
         if k ~= nil then
             return nil, string.format(
                 "Invalid schema: redundant key %q", k
@@ -38,12 +41,47 @@ local function check_schema_format(schema)
     return true
 end
 
-local function _check_schema(schema)
-    for space_name, space_schema in pairs(schema.spaces) do
-        local ok, err = ddl_check.check_space(space_name, space_schema)
+local function _check_and_dry_run_sequences(sequences)
+    for sequence_name, sequence_schema in pairs(sequences) do
+        local ok, err = ddl_check.check_sequence(sequence_name, sequence_schema)
         if not ok then
             return nil, err
         end
+
+        if box.sequence[sequence_name] ~= nil then
+            local current_schema = ddl_get.get_sequence_schema(sequence_name)
+            local _, err = ddl_compare.assert_equiv_sequence_schema(sequence_schema, current_schema)
+            if err ~= nil then
+                return nil, string.format(
+                    "Incompatible schema: sequences[%q] %s", sequence_name, err)
+            end
+        else
+            local ok, err = pcall(
+                ddl_set.create_sequence,
+                sequence_name, sequence_schema, {dummy = true}
+            )
+
+            local dummy = box.sequence['_ddl_dummy']
+            if dummy then
+                pcall(box.schema.sequence.drop, dummy.id)
+            end
+
+            if not ok then
+                return nil, tostring(err):gsub('_ddl_dummy', sequence_name)
+            end
+        end
+    end
+
+    return true
+end
+
+local function _check_and_dry_run_spaces(spaces, sequences)
+    for space_name, space_schema in pairs(spaces) do
+        local ok, err = ddl_check.check_space(space_name, space_schema, sequences)
+        if not ok then
+            return nil, err
+        end
+
         if box.space[space_name] ~= nil then
             local diff = {}
             local current_schema = ddl_get.get_space_schema(space_name)
@@ -75,6 +113,23 @@ local function _check_schema(schema)
     return true
 end
 
+local function _check_and_dry_run_schema(schema)
+    -- Create dry-run sequences before spaces since space indexes use sequences.
+    local sequences = schema.sequences or {}
+    local ok, err = _check_and_dry_run_sequences(sequences)
+    if not ok then
+        return nil, err
+    end
+
+    local spaces = schema.spaces
+    local ok, err = _check_and_dry_run_spaces(spaces, sequences)
+    if not ok then
+        return nil, err
+    end
+
+    return true
+end
+
 local function check_schema(schema)
     local ok, err = check_schema_format(schema)
     if not ok then
@@ -89,7 +144,7 @@ local function check_schema(schema)
         return nil, "Instance is read-only (check box.cfg.read_only and box.info.status)"
     end
 
-    return ddl_db.call_dry_run(_check_schema, schema)
+    return ddl_db.call_dry_run(_check_and_dry_run_schema, schema)
 end
 
 local function set_metadata_space(metadata_name, space_format)
@@ -127,6 +182,12 @@ local function _set_schema(schema)
         }
     )
 
+    for sequence_name, sequence_schema in pairs(schema.sequences or {}) do
+        if box.sequence[sequence_name] == nil then
+            ddl_set.create_sequence(sequence_name, sequence_schema)
+        end
+    end
+
     for space_name, space_schema in pairs(schema.spaces) do
         if box.space[space_name] == nil then
             ddl_set.create_space(space_name, space_schema)
@@ -153,8 +214,22 @@ local function get_schema()
         end
     end
 
+    local sequences = {}
+    for _, sequence in box.space._sequence:pairs() do
+        sequences[sequence.name] = ddl_get.get_sequence_schema(sequence.name)
+    end
+
+    local next_k = next(sequences)
+    local no_sequences = next_k == nil
+
+    if no_sequences then
+        -- For backward compatibility.
+        sequences = nil
+    end
+
     return {
         spaces = spaces,
+        sequences = sequences,
     }
 end
 

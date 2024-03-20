@@ -489,7 +489,9 @@ local function check_index_parts(index, space)
     return true
 end
 
-local function check_index(i, index, space)
+local function check_index(i, index, space, sequences)
+    sequences = sequences or {}
+
     if type(index) ~= 'table' then
         return nil, string.format(
             "spaces[%q].indexes[%d]: bad value" ..
@@ -709,9 +711,30 @@ local function check_index(i, index, space)
         end
     end
 
-    local keys = {'type', 'name', 'unique', 'parts', 'field'}
+    do
+        local index_sequence_name = index.sequence
+
+        if index_sequence_name ~= nil then
+            if type(index_sequence_name) ~= 'string' then
+                return nil, string.format(
+                    "spaces[%q].indexes[%q].sequence: incorrect value (string expected, got %s)",
+                    space.name, index.name, type(index_sequence_name)
+                )
+            end
+
+            local sequence = sequences[index_sequence_name]
+            if sequence == nil then
+                return nil, string.format(
+                    "spaces[%q].indexes[%q].sequence: missing sequence %q in sequences section",
+                    space.name, index.name, index_sequence_name
+                )
+            end
+        end
+    end
+
+    local keys = {'type', 'name', 'unique', 'parts', 'field', 'sequence'}
     if index.type == 'RTREE' then
-        keys = {'type', 'name', 'unique', 'parts', 'field', 'dimension', 'distance'}
+        keys = {'type', 'name', 'unique', 'parts', 'field', 'dimension', 'distance', 'sequence'}
     end
 
     local k = utils.redundant_key(index, keys)
@@ -961,7 +984,7 @@ local function check_sharding_metadata(space)
 end
 
 
-local function check_space(space_name, space)
+local function check_space(space_name, space, sequences)
     if type(space_name) ~= 'string' then
         return nil, string.format(
             "spaces[%s]: invalid space name (string expected, got %s)",
@@ -1074,7 +1097,7 @@ local function check_space(space_name, space)
                 name = space_name,
                 engine = space.engine,
                 fields = space_fields,
-            })
+            }, sequences)
 
             if not ok then
                 return nil, err
@@ -1118,6 +1141,94 @@ local function check_space(space_name, space)
     return true
 end
 
+local function check_sequence_nullable_option_type(sequence_name, sequence,
+                                                   option_name, type_checker)
+    local option = sequence[option_name]
+    if option == nil then
+        return true
+    end
+
+    local _, err = type_checker(option)
+    if err ~= nil then
+        return nil, string.format(
+            "sequences[%q].%s: bad value (%s)",
+            sequence_name, option_name, err
+        )
+    end
+
+    return true
+end
+
+local function check_sequence_multiple_nullable_options_type(sequence_name, sequence,
+                                                             option_names_array, type_checker)
+    for _, option_name in ipairs(option_names_array) do
+        local _, err = check_sequence_nullable_option_type(sequence_name, sequence,
+                                                           option_name, type_checker)
+        if err ~= nil then
+            return err
+        end
+    end
+
+    return true
+end
+
+local function check_sequence(sequence_name, sequence)
+    if type(sequence_name) ~= 'string' then
+        return nil, string.format(
+            "sequences[%s]: invalid sequence name (string expected, got %s)",
+            sequence_name, type(sequence_name)
+        )
+    end
+
+    if type(sequence) ~= 'table' then
+        return nil, string.format(
+            "sequences[%q]: bad value (table expected, got %s)",
+            sequence_name, type(sequence)
+        )
+    end
+
+    local number_nullable_options = {'start', 'min', 'max', 'cache', 'step'}
+    local number_checker = function(v)
+        if not utils.is_number(v) then
+            local actual_type = type(v)
+            return nil, ('number expected, got %s'):format(actual_type)
+        else
+            return true
+        end
+    end
+    local _, err = check_sequence_multiple_nullable_options_type(sequence_name, sequence,
+                                                                 number_nullable_options, number_checker)
+    if err ~= nil then
+        return nil, err
+    end
+
+    local boolean_nullable_options = {'cycle'}
+    local boolean_checker = function(v)
+        if type(v) ~= 'boolean' then
+            local actual_type = type(v)
+            return nil, ('boolean expected, got %s'):format(actual_type)
+        else
+            return true
+        end
+    end
+    local _, err = check_sequence_multiple_nullable_options_type(sequence_name, sequence,
+                                                                 boolean_nullable_options, boolean_checker)
+    if err ~= nil then
+        return nil, err
+    end
+
+    local allowed_options = utils.concat_arrays(number_nullable_options, boolean_nullable_options)
+    local k = utils.redundant_key(sequence, allowed_options)
+    if k ~= nil then
+        return nil, string.format(
+            "sequences[%q]: redundant key %q",
+            sequence_name, k
+        )
+    end
+
+    return true
+end
+
 
 return {
     check_space = check_space,
@@ -1128,7 +1239,8 @@ return {
     check_index_parts = check_index_parts,
     check_index = check_index,
     check_field = check_field,
+    check_sequence = check_sequence,
     internal = {
         is_callable = is_callable,
-    }
+    },
 }

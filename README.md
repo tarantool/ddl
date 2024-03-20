@@ -205,17 +205,16 @@ format = {
         },
         ...
     },
-    sequences = { -- Not implemented yet
-        [seqence_name] = {
-            start
-            min
-            max
-            cycle
-            cache
-            step
-
-        }
-    }
+    sequences = {
+        [sequence_name] = {
+            start = start,
+            min = min,
+            max = max,
+            cycle = cycle,
+            cache = cache,
+            step = step,
+        },
+    },
 }
 ```
 
@@ -292,8 +291,52 @@ local schema = {
             }},
             sharding_key = {'customer_id'},
             sharding_func = 'vshard.router.bucket_id_mpcrc32',
-        }
-    }
+        },
+        tickets = {
+            engine = 'memtx',
+            is_local = false,
+            temporary = false,
+            format = {
+                {name = 'ticket_id', is_nullable = false, type = 'unsigned'},
+                {name = 'customer_id', is_nullable = false, type = 'unsigned'},
+                {name = 'bucket_id', is_nullable = false, type = 'unsigned'},
+                {name = 'contents', is_nullable = false, type = 'string'},
+            },
+            indexes = {{
+                name = 'ticket_id',
+                type = 'TREE',
+                unique = true,
+                parts = {
+                    {path = 'ticket_id', is_nullable = false, type = 'unsigned'}
+                },
+                sequence = 'ticket_seq',
+            }, {,
+                name = 'customer_id',
+                type = 'TREE',
+                unique = false,
+                parts = {
+                    {path = 'customer_id', is_nullable = false, type = 'unsigned'}
+                }
+            }, {
+                name = 'bucket_id',
+                type = 'TREE',
+                unique = false,
+                parts = {
+                    {path = 'bucket_id', is_nullable = false, type = 'unsigned'}
+                }
+            }},
+            sharding_key = {'customer_id'},
+            sharding_func = 'vshard.router.bucket_id_mpcrc32',
+        },
+    },
+    sequences = {
+        ticket_seq = {
+            start = 1,
+            min = 1,
+            max = 10000,
+            cycle = false,
+        },
+    },
 }
 ```
 
