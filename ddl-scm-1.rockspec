@@ -5,6 +5,10 @@ source  = {
     url = 'git+https://github.com/tarantool/ddl.git'
 }
 
+description = {
+    license = 'BSD',
+}
+
 dependencies = {
     'lua >= 5.1';
     'tarantool';
