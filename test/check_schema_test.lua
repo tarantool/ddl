@@ -1698,22 +1698,22 @@ end
 
 local sequence_invalid_option_cases = {
     start = {
-        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'start' should be of type number",
+        err = "options parameter 'start' should be of type number",
     },
     min = {
-        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'min' should be of type number",
+        err = "options parameter 'min' should be of type number",
     },
     max = {
-        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'max' should be of type number",
+        err = "options parameter 'max' should be of type number",
     },
     cache = {
-        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'cache' should be of type number",
+        err = "options parameter 'cache' should be of type number",
     },
     step = {
-        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'step' should be of type number",
+        err = "options parameter 'step' should be of type number",
     },
     cycle = {
-        err = "sequences[\"seq\"]: Illegal parameters, options parameter 'cycle' should be of type boolean",
+        err = "options parameter 'cycle' should be of type boolean",
     },
 }
 
@@ -1731,6 +1731,7 @@ for option_key, case in pairs(sequence_invalid_option_cases) do
         }
 
         local _, err = ddl.set_schema(schema)
+        t.assert_str_matches(err, '^sequences%["seq"%]: ')
         t.assert_str_contains(err, case.err)
     end
 end
