@@ -1731,7 +1731,7 @@ for option_key, case in pairs(sequence_invalid_option_cases) do
         }
 
         local _, err = ddl.set_schema(schema)
-        t.assert_str_matches(err, '^sequences%["seq"%]: ')
+        t.assert_str_matches(err, '^sequences%["seq"%]: .*')
         t.assert_str_contains(err, case.err)
     end
 end
