@@ -4,8 +4,11 @@ local g = t.group()
 local fio = require('fio')
 local yaml = require('yaml')
 local helpers = require('test.helper')
+local tarantool_helpers = require('test.tarantool_helpers')
 
 g.before_all(function()
+    tarantool_helpers.skip_if_tarantool3()
+
     t.skip_if(
         not pcall(require, 'cartridge'),
         'cartridge not installed'

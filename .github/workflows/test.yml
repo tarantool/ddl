@@ -9,27 +9,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tarantool: ['1.10', '2.5', '2.6', '2.7', '2.8', '2.10']
-        coveralls: [false]
-        include:
-          - tarantool: '2.11'
-            coveralls: true
-    # There are problems with current version of the
-    # setup-tarantool action on Ubuntu Jammy (ubuntu-latest or
-    # ubuntu-22.04). Use Ubuntu Focal (ubuntu-20.04) until they
-    # will be resolved. See [1] for details.
-    #
-    # [1]: https://github.com/tarantool/setup-tarantool/issues/36
-    runs-on: [ubuntu-20.04]
+        tarantool: ['2.11', '3.3']
+
+    runs-on: [ubuntu-24.04]
     steps:
       - uses: actions/checkout@v4
 
-      - uses: tarantool/setup-tarantool@v2
+      - uses: tarantool/setup-tarantool@v3
         with:
           tarantool-version: ${{ matrix.tarantool }}
 
       - name: Prepare apt repo
-        run: curl -L https://tarantool.io/release/2/installer.sh | bash
+        run: curl -L https://tarantool.io/release/3/installer.sh | bash
 
       - name: Install tt cli
         run: sudo apt install -y tt
@@ -38,7 +29,7 @@ jobs:
 
       # Setup luatest and luacheck
       - name: Cache rocks
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-rocks
         with:
           path: .rocks/
@@ -66,10 +57,11 @@ jobs:
 
       - name: Run tests and code coverage analysis
         run: make -C build coverage
+        if: ${{ startsWith(matrix.tarantool, '2.') }}
 
       - name: Send code coverage to coveralls.io
         run: make -C build coveralls
-        if: ${{ matrix.coveralls }}
+        if: ${{ startsWith(matrix.tarantool, '2.') }}
 
       # Cleanup cached paths
       - run: tt rocks remove cartridge
@@ -78,23 +70,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tarantool: ['2.11']
-    # There are problems with current version of the
-    # setup-tarantool action on Ubuntu Jammy (ubuntu-latest or
-    # ubuntu-22.04). Use Ubuntu Focal (ubuntu-20.04) until they
-    # will be resolved. See [1] for details.
-    #
-    # [1]: https://github.com/tarantool/setup-tarantool/issues/36
-    runs-on: [ubuntu-20.04]
+        tarantool: ['2.11', '3.3']
+
+    runs-on: [ubuntu-24.04]
     steps:
       - uses: actions/checkout@v4
 
-      - uses: tarantool/setup-tarantool@v2
+      - uses: tarantool/setup-tarantool@v3
         with:
           tarantool-version: ${{ matrix.tarantool }}
 
       - name: Prepare apt repo
-        run: curl -L https://tarantool.io/release/2/installer.sh | bash
+        run: curl -L https://tarantool.io/release/3/installer.sh | bash
 
       - name: Install tt cli
         run: sudo apt install -y tt
@@ -103,7 +90,7 @@ jobs:
 
       # Setup luatest
       - name: Cache rocks
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-rocks
         with:
           path: .rocks/

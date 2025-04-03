@@ -349,5 +349,6 @@ tt rocks make
 ```bash
 tt rocks install luatest 0.5.7
 tt rocks install luacheck 0.25.0
+tt rocks install cartridge
 make test -C build.luarocks ARGS="-V"
 ```
